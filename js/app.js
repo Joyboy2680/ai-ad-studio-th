@@ -409,20 +409,26 @@ async function handleAutoFill() {
     if (result.visualDetails) el.productVisualInput.value = result.visualDetails;
     if (result.characterAnchor) el.characterAnchorInput.value = result.characterAnchor;
 
-    if (result.sources?.length) {
+    const noteBadge = result.note
+      ? `<span class="sample-label" style="color:#fde047;">หมายเหตุ: ${escapeHtml(result.note)}</span>`
+      : '';
+
+    if (result.sources?.length || noteBadge) {
       el.groundingSources.innerHTML =
-        '<span class="sample-label">Google Search Grounding:</span>' +
-        result.sources
-          .slice(0, 3)
-          .map(
-            (s) =>
-              `<a class="grounding-chip" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.uri)}</a>`
-          )
-          .join('');
+        (result.sources?.length
+          ? '<span class="sample-label">Sources:</span>' +
+            result.sources
+              .slice(0, 3)
+              .map(
+                (s) =>
+                  `<a class="grounding-chip" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.uri)}</a>`
+              )
+              .join('')
+          : '') + noteBadge;
     }
 
     showToast(
-      `AI Auto-Fill สำเร็จด้วย ${result.modelId} + Google Search Grounding!`,
+      `AI Auto-Fill สำเร็จด้วย ${result.modelId} + URL Context & Search Grounding!`,
       'success'
     );
   } catch (err) {

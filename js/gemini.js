@@ -123,28 +123,50 @@ async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
 
     const groundingChunks =
       candidate?.groundingMetadata?.groundingChunks || [];
-    const sources = groundingChunks
-      .map((chunk) => ({
+    const urlMeta =
+      candidate?.urlContextMetadata?.urlMetadata || [];
+
+    const sources = [
+      ...groundingChunks.map((chunk) => ({
         title: chunk?.web?.title || '',
         uri: chunk?.web?.uri || ''
+      })),
+      ...urlMeta.map((u) => ({
+        title: u?.urlRetrievalStatus === 'URL_RETRIEVAL_STATUS_SUCCESS' ? 'URL Context' : 'URL Checked',
+        uri: u?.retrievedUrl || ''
       }))
-      .filter((s) => s.uri);
+    ].filter((s) => s.uri);
 
-    return { text, sources, model, raw: data };
+    // Deduplicate sources by URI
+    const uniqueSources = [];
+    const seen = new Set();
+    for (const s of sources) {
+      if (!seen.has(s.uri)) {
+        seen.add(s.uri);
+        uniqueSources.push(s);
+      }
+    }
+
+    return { text, sources: uniqueSources, model, raw: data };
   }
 
   throw lastError || new Error('ไม่สามารถเชื่อมต่อโมเดล Gemini ได้');
 }
 
 /**
- * AI Auto-Fill from Product URL using gemini-3.8-flash + Google Search Grounding.
+ * AI Auto-Fill from Product URL using gemini-3.8-flash + URL Context + Google Search Grounding.
+ * Handles direct URLs as well as e-commerce short links (s.shopee.co.th, vt.tiktok.com, s.lazada.co.th).
  */
 export async function autoFillFromUrl(apiKey, url) {
   const prompt = `คุณคือผู้เชี่ยวชาญการตลาดอีคอมเมิร์ซและโปรดิวเซอร์โฆษณาไทย
-ใช้ Google Search Grounding ค้นหาข้อมูลสินค้าจากลิงก์นี้:
-${url}
+เป้าหมาย: ดึงข้อมูลสินค้าจริงจากลิงก์นี้เพื่อนำไปทำคลิปขายของ 15 วิ และภาพนิ่ง Imagen
+ลิงก์สินค้า: ${url}
 
-สรุปข้อมูลสินค้าให้แม่นยำ กระชับ พร้อมนำไปสร้างคลิปขายของ 15 วินาที และพรอมภาพนิ่ง Imagen
+ขั้นตอนการทำงาน:
+1. ใช้ url_context เปิดและติดตามลิงก์ปลายทาง (รวมถึงลิงก์ย่ออย่าง s.shopee.co.th, s.lazada.co.th, vt.tiktok.com)
+2. หากหน้าเว็บมีระบบล็อกอินหรืออ่านได้บางส่วน ให้ดึงชื่อสินค้า, slug ใน URL, shop_id และ item_id จากลิงก์ปลายทาง แล้วใช้ google_search ค้นหาเพิ่มเติม (เช่น site:shopee.co.th <item_id> หรือ <shop_id>) เพื่อให้ได้ข้อมูลสินค้าและร้านค้าจริงมากที่สุด
+3. ห้ามเดาสินค้ามั่วที่ไม่เกี่ยวข้อง หากพบเพียงข้อมูลร้านค้า/หมวดสินค้า (เช่น รู้ร้านแต่ไม่เจอรหัสสินค้าย่อย) ให้ระบุในฟิลด์ "note" ให้ชัดเจน
+
 ตอบกลับเป็น JSON object เท่านั้น (ห้ามใส่คำอธิบายอื่นนอก JSON) ตามโครงสร้างนี้:
 {
   "productName": "ชื่อสินค้าและแบรนด์ (ภาษาไทย/อังกฤษตามจริง)",
@@ -152,24 +174,41 @@ ${url}
   "pricePromo": "ราคาและโปรโมชันที่พบ (หากไม่พบให้แนะนำข้อความโปรขายดีสั้นๆ)",
   "audience": "กลุ่มเป้าหมายหลักในไทย",
   "visualDetails": "รายละเอียดลักษณะสินค้า สี บรรจุภัณฑ์ และพร็อพที่เหมาะถ่ายทำ (ภาษาไทยหรืออังกฤษ)",
-  "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow"
+  "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow",
+  "note": "หมายเหตุสั้นๆ หากเป็นลิงก์ย่อที่ติดหน้าล็อกอินของแพลตฟอร์ม หรือเว้นว่างไว้ถ้าดึงข้อมูลได้ครบ"
 }`;
 
-  const { text, sources, model } = await callGeminiWithFallback(apiKey, (m) => {
+  const buildRequest = (useUrlContext) => (m) => {
     const generationConfig = {
       thinkingConfig: m.thinkingConfig
     };
     if (m.supportsTemperature) {
       generationConfig.temperature = 0.35;
     }
+    const tools = useUrlContext
+      ? [{ url_context: {} }, { google_search: {} }]
+      : [{ google_search: {} }];
     return {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      tools: [{ google_search: {} }],
+      tools,
       generationConfig
     };
-  });
+  };
 
-  const parsed = extractJsonObject(text);
+  let result;
+  try {
+    result = await callGeminiWithFallback(apiKey, buildRequest(true));
+  } catch (err) {
+    // Graceful fallback if url_context tool is unavailable on a specific key/model
+    const msg = (err?.message || '').toLowerCase();
+    if (msg.includes('url_context') || msg.includes('tool') || msg.includes('400')) {
+      result = await callGeminiWithFallback(apiKey, buildRequest(false));
+    } else {
+      throw err;
+    }
+  }
+
+  const parsed = extractJsonObject(result.text);
 
   return {
     productName: parsed.productName || '',
@@ -178,8 +217,9 @@ ${url}
     audience: parsed.audience || '',
     visualDetails: parsed.visualDetails || '',
     characterAnchor: parsed.characterAnchor || '',
-    sources,
-    modelId: model.id
+    note: parsed.note || '',
+    sources: result.sources,
+    modelId: result.model.id
   };
 }
 

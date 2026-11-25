@@ -432,9 +432,8 @@ export function buildLocalStudioPlan(input) {
     }
   ];
 
-  const cleanTag = productName
-    .replace(/[^a-zA-Z0-9ก-๙]/g, '')
-    .slice(0, 22);
+  const firstToken = productName.split(/\s+/)[0] || '';
+  const cleanTag = firstToken.replace(/[^a-zA-Z0-9ก-๙]/g, '').slice(0, 20);
 
   const captions = [
     {
