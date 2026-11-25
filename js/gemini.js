@@ -498,3 +498,318 @@ Rules:
     hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags : []
   };
 }
+
+/* ==========================================================================
+   UGC 4-Panel Seamless 1:1 Image Prompt & Gemini Image Generation
+   ========================================================================== */
+
+export const IMAGE_MODEL_CANDIDATES = [
+  {
+    id: 'gemini-3.1-flash-image-preview',
+    label: 'Nano Banana 2 (gemini-3.1-flash-image-preview)'
+  },
+  {
+    id: 'gemini-3-pro-image-preview',
+    label: 'Nano Banana Pro (gemini-3-pro-image-preview • ฟอนต์ไทยคม)'
+  },
+  {
+    id: 'gemini-3.1-flash-lite-image',
+    label: 'Nano Banana 2 Lite (gemini-3.1-flash-lite-image)'
+  },
+  {
+    id: 'gemini-2.5-flash-image',
+    label: 'Nano Banana (gemini-2.5-flash-image)'
+  }
+];
+
+/**
+ * Builds a deterministic, high-craft UGC 4-panel seamless 1:1 prompt locally
+ * (used immediately in Demo mode or as fallback if text quota is exhausted).
+ */
+export function buildUgc4GridLocalPrompt(input = {}) {
+  const name = (input.productName || 'สินค้ายอดฮิต').trim();
+  const benefits = (
+    input.benefits || 'ใช้งานง่าย เห็นผลจริง พกพาสะดวก คุ้มราคา'
+  ).trim();
+  const visual = (
+    input.visualDetails ||
+    'real product packaging resting naturally in a cozy everyday Thai home setting'
+  ).trim();
+  const pricePromo = (input.pricePromo || '').trim();
+
+  const shortHighlight = benefits
+    .split(/[.,\n•]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const shortPromo = pricePromo
+    ? pricePromo.split(/[()]/)[0].trim().slice(0, 22).trim()
+    : '';
+
+  const panels = [
+    {
+      label: 'ช่อง 1 (บนซ้าย) • แกะใช้จริงบนโต๊ะ',
+      thaiText: 'ของมันต้องมี ✨ ใช้จริงทุกวัน!',
+      scene: `Top-left quadrant: Candid everyday unboxing / first-use close-up of ${name} resting naturally on a warm lived-in wooden table next to everyday personal items (${visual}), soft natural window daylight.`
+    },
+    {
+      label: 'ช่อง 2 (บนขวา) • ซูมเนื้อสัมผัส/ดีเทล',
+      thaiText: shortHighlight[0]
+        ? `${shortHighlight[0].slice(0, 22)} 👍`
+        : 'ดีเทลจึ้งมาก!',
+      scene: `Top-right quadrant: Tight smartphone macro shot focusing on the real texture, material finish, and functional detail of ${name} in active everyday use, authentic shallow depth of field.`
+    },
+    {
+      label: 'ช่อง 3 (ล่างซ้าย) • มุมใช้งานจริงไม่จัดฉาก',
+      thaiText: shortHighlight[1]
+        ? `${shortHighlight[1].slice(0, 22)} ♡`
+        : 'พกง่าย ใช้คล่องสุดๆ',
+      scene: `Bottom-left quadrant: Real-life casual placement of ${name} inside an everyday bag, kitchen counter, or cozy bedside setup — unpolished authentic lifestyle moment, warm ambient indoor lighting.`
+    },
+    {
+      label: 'ช่อง 4 (ล่างขวา) • ป้ายยาคุ้มราคา',
+      thaiText: shortPromo ? `คุ้ม! ${shortPromo}` : 'ลองแล้วเลิฟ กดซ้ำเลย!',
+      scene: `Bottom-right quadrant: Satisfied after-use / flat-lay snapshot of ${name} looking neat and ready to recommend, soft afternoon sunlight shadows across natural surfaces.`
+    }
+  ];
+
+  const prompt = [
+    `Create a 1:1 square aesthetic 2x2 four-panel seamless photo grid collage reviewing "${name}" in authentic Thai UGC real-user style.`,
+    `STRICT LAYOUT: Exactly 4 square quadrants arranged edge-to-edge with ZERO borders, ZERO divider lines, ZERO gaps, and ZERO white frames separating the 4 panels — images touch seamlessly.`,
+    `STRICT NO-CHARACTER RULE: NO people, NO faces, NO characters, NO human models, and NO full hands/bodies anywhere in the frame — product-only real-life POV environment.`,
+    `AUTHENTIC UGC REALISM: Candid smartphone camera aesthetic (iPhone natural color science), cozy lived-in Thai home / cafe / work desk atmosphere, not overly staged commercial studio, realistic ambient window light and subtle organic shadows, cohesive warm aesthetic color grading, crisp product details (${visual}).`,
+    `PANELS CONTENT:`,
+    `1) ${panels[0].scene} Decorated with cute neat Thai handwritten marker font text "${panels[0].thaiText}" and a tiny hand-drawn arrow.`,
+    `2) ${panels[1].scene} Decorated with cute neat Thai handwritten brush font text "${panels[1].thaiText}" and small doodle stars.`,
+    `3) ${panels[2].scene} Decorated with cute neat Thai handwritten pen font text "${panels[2].thaiText}" and a small hand-drawn heart.`,
+    `4) ${panels[3].scene} Decorated with cute neat Thai handwritten highlighter callout "${panels[3].thaiText}" pointing toward the product.`,
+    `TYPOGRAPHY & FINISH: Cute, clean, legible Thai handwritten marker/pen font annotations naturally layered in corners without blocking the product, aesthetically pleasing cozy lifestyle review look, high detail.`
+  ].join('\n');
+
+  return {
+    productName: name,
+    benefits,
+    pricePromo,
+    visualDetails: visual,
+    panels,
+    prompt,
+    source: 'local'
+  };
+}
+
+/**
+ * Analyzes product URL (and optional Ingredient 1 image) via Gemini, then builds
+ * a tailored 1:1 seamless 4-panel character-free UGC review image prompt with Thai handwritten text.
+ */
+export async function analyzeProductAndBuildUgcPrompt(apiKey, input = {}) {
+  const url = (input.url || '').trim();
+  const hasIng1 = Boolean(input.ingredient1?.base64);
+
+  // First ensure we have analyzed product metadata if URL or image was given without productName
+  let productData = {
+    productName: (input.productName || '').trim(),
+    benefits: (input.benefits || '').trim(),
+    pricePromo: (input.pricePromo || '').trim(),
+    audience: (input.audience || '').trim(),
+    visualDetails: (input.visualDetails || '').trim(),
+    sources: [],
+    note: ''
+  };
+
+  if (apiKey && (url || hasIng1)) {
+    try {
+      const analyzed = await autoFillFromUrl(apiKey, url, {
+        preferredModel: input.preferredModel || 'auto',
+        ingredient1: input.ingredient1
+      });
+      productData = {
+        productName: analyzed.productName || productData.productName,
+        benefits: analyzed.benefits || productData.benefits,
+        pricePromo: analyzed.pricePromo || productData.pricePromo,
+        audience: analyzed.audience || productData.audience,
+        visualDetails: analyzed.visualDetails || productData.visualDetails,
+        characterAnchor: analyzed.characterAnchor || '',
+        sources: analyzed.sources || [],
+        note: analyzed.note || '',
+        analyzedBy: analyzed.modelId
+      };
+    } catch (err) {
+      // If productName already exists, continue gracefully; otherwise propagate
+      if (!productData.productName) {
+        throw err;
+      }
+      productData.note = err.message;
+    }
+  }
+
+  // Ask Gemini to craft the ultra-tailored 4-panel prompt + 4 Thai handwritten labels
+  if (apiKey && productData.productName) {
+    const promptRequest = `คุณคือ Creative Director เชี่ยวชาญการทำภาพขายของ UGC ไทยบน TikTok/IG/Shopee
+วิเคราะห์สินค้าต่อไปนี้แล้วสร้าง "Prompt สำหรับเจนภาพ 1:1 แบบตาราง 4 ช่อง ไม่มีเส้นคั่น" ตามเงื่อนไขเป๊ะๆ:
+- ชื่อสินค้า: ${productData.productName}
+- จุดเด่น: ${productData.benefits}
+- ราคา/โปร: ${productData.pricePromo}
+- ลักษณะสินค้า: ${productData.visualDetails}
+
+เงื่อนไขบังคับของภาพ:
+1. อัตราส่วน 1:1 แบบตาราง 2x2 (4 ช่อง) **ไม่มีเส้นคั่นระหว่างช่อง ไม่มีขอบขาว ภาพชนกันเนียนๆ (seamless edge-to-edge grid, zero dividers, zero borders)**
+2. สไตล์ UGC เหมือนคนซื้อมาใช้จริงรีวิวเอง **ไม่มีตัวละคร ไม่มีหน้าคน ไม่มีนางแบบ/นายแบบ**
+3. **ไม่จัดฉากสตูดิโอจนเกินไป** เน้นวางใช้งานจริงในบ้าน โต๊ะทำงาน เคาน์เตอร์ หรือพกพาจริง แสงธรรมชาติสวยๆ ดูน่าเชื่อถือและสวยงาม
+4. ตกแต่งด้วย **Text font ภาษาไทยลายมือ** น่ารัก อ่านง่าย (เช่น ข้อความสั้นๆ 3-5 คำต่อช่อง + ลูกศร/ดาววาดมือเล็กๆ) ไม่บังตัวสินค้า
+
+ตอบกลับเป็น JSON เท่านั้น:
+{
+  "panels": [
+    { "label": "ช่อง 1 (บนซ้าย)", "thaiText": "ข้อความลายมือไทยสั้นๆ ช่อง 1", "scene": "English scene description for top-left quadrant" },
+    { "label": "ช่อง 2 (บนขวา)", "thaiText": "ข้อความลายมือไทยสั้นๆ ช่อง 2", "scene": "English scene description for top-right quadrant" },
+    { "label": "ช่อง 3 (ล่างซ้าย)", "thaiText": "ข้อความลายมือไทยสั้นๆ ช่อง 3", "scene": "English scene description for bottom-left quadrant" },
+    { "label": "ช่อง 4 (ล่างขวา)", "thaiText": "ข้อความลายมือไทยสั้นๆ ช่อง 4", "scene": "English scene description for bottom-right quadrant" }
+  ],
+  "prompt": "Full cohesive English image generation prompt incorporating all 4 seamless quadrants, zero dividers, no characters, realistic everyday Thai UGC usage, and the exact 4 Thai handwritten text annotations."
+}`;
+
+    try {
+      const { text, model } = await callGeminiWithFallback(
+        apiKey,
+        (m) => {
+          const parts = [{ text: promptRequest }];
+          if (hasIng1) {
+            parts.push({
+              inlineData: { mimeType: 'image/jpeg', data: input.ingredient1.base64 }
+            });
+          }
+          const generationConfig = {
+            thinkingConfig: m.thinkingConfig,
+            responseMimeType: 'application/json'
+          };
+          if (m.supportsTemperature) generationConfig.temperature = 0.65;
+          return {
+            contents: [{ role: 'user', parts }],
+            generationConfig
+          };
+        },
+        input.preferredModel || 'auto',
+        undefined,
+        2
+      );
+      const parsed = extractJsonObject(text);
+      if (parsed?.prompt && Array.isArray(parsed.panels)) {
+        return {
+          ...productData,
+          panels: parsed.panels.slice(0, 4),
+          prompt: parsed.prompt,
+          promptModelId: model.id,
+          source: 'gemini'
+        };
+      }
+    } catch {
+      // Fall back cleanly to deterministic builder if text generation hits 429
+    }
+  }
+
+  const localBuilt = buildUgc4GridLocalPrompt(productData);
+  return {
+    ...productData,
+    ...localBuilt
+  };
+}
+
+/**
+ * Generates an actual 1:1 image using Gemini native image generation models
+ * (Nano Banana 2 / Nano Banana Pro / Nano Banana 2 Lite / Nano Banana).
+ */
+export async function generateUgcImageWithGemini(apiKey, options = {}) {
+  const {
+    prompt,
+    preferredImageModel = 'auto',
+    ingredient1 = null,
+    aspectRatio = '1:1'
+  } = options;
+
+  if (!apiKey) {
+    throw new Error('กรุณาใส่ Gemini API Key ก่อนสร้างรูปภาพด้วย Gemini');
+  }
+  if (!prompt || !prompt.trim()) {
+    throw new Error('กรุณาสร้างหรือกรอก Prompt สำหรับภาพ 4 ช่องก่อน');
+  }
+
+  const ordered =
+    preferredImageModel && preferredImageModel !== 'auto'
+      ? [
+          ...IMAGE_MODEL_CANDIDATES.filter((m) => m.id === preferredImageModel),
+          ...IMAGE_MODEL_CANDIDATES.filter((m) => m.id !== preferredImageModel)
+        ]
+      : IMAGE_MODEL_CANDIDATES;
+
+  const parts = [{ text: prompt.trim() }];
+  if (ingredient1?.base64) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: ingredient1.base64
+      }
+    });
+  }
+
+  let lastError = null;
+  let lastStatus = 0;
+
+  for (const model of ordered) {
+    const url = `${API_BASE}/${model.id}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const body = {
+      contents: [{ role: 'user', parts }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+        imageConfig: { aspectRatio }
+      }
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const msg = data?.error?.message || `Image API Error (HTTP ${res.status})`;
+      lastStatus = res.status;
+      lastError = new Error(msg);
+      if (shouldTryNextModel(res.status, msg) || res.status === 400) {
+        continue;
+      }
+      throw lastError;
+    }
+
+    const candParts = data?.candidates?.[0]?.content?.parts || [];
+    const imgPart = candParts.find((p) => p?.inlineData?.data);
+    if (!imgPart) {
+      lastError = new Error(`โมเดล ${model.id} ไม่ได้ส่งข้อมูลรูปภาพกลับมา`);
+      continue;
+    }
+
+    const mimeType = imgPart.inlineData.mimeType || 'image/png';
+    const base64 = imgPart.inlineData.data;
+    return {
+      modelId: model.id,
+      mimeType,
+      base64,
+      dataUrl: `data:${mimeType};base64,${base64}`,
+      captionText: candParts
+        .filter((p) => typeof p.text === 'string' && !p.thought)
+        .map((p) => p.text)
+        .join('\n')
+        .trim()
+    };
+  }
+
+  const err = new Error(
+    lastStatus === 429
+      ? 'โมเดลสร้างภาพ Gemini ติดโควตา 429 (โมเดล Nano Banana Image มักต้องเปิด Billing หรือมีโควตา Free Tier จำกัด) — คุณสามารถกด "สร้างภาพพรีวิว 4 ช่อง (Canvas)" เพื่อดูตัวอย่างและทดสอบบันทึกเข้า Google Drive ได้ทันที'
+      : lastError?.message || 'ไม่สามารถสร้างรูปภาพด้วย Gemini ได้'
+  );
+  err.status = lastStatus;
+  throw err;
+}
+

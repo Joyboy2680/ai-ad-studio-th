@@ -18,6 +18,7 @@
   2. **พรอมภาพนิ่ง 3** (Imagen 3 / 4: Hero, Lifestyle, Flat-Lay)
   3. **แคปชั่น & #** (TikTok/Reels, Facebook/IG, Shopee/Line OA + แฮชแท็ก)
   4. **ดูไทม์ไลน์ทั้งหมด** (มุมมองไทม์ไลน์ 0–15 วิครบทุกช็อต + ปุ่ม **Copy All** และ Export `.TXT`)
+  5. **ภาพ UGC 4 ช่อง (1:1 → Google Drive)** วิเคราะห์ลิงก์สินค้า → สร้าง Prompt ตาราง 4 ช่องไม่มีเส้นคั่น สไตล์ UGC ไม่มีตัวละคร เน้นใช้งานจริง + Text ภาษาไทยลายมือ → สร้างภาพใน Gemini (Nano Banana 2 / Pro / Lite) หรือพรีวิว Canvas 1080×1080 → บันทึกเข้า Google Drive อัตโนมัติ (Apps Script Web App / Drive OAuth API)
 
 ## วิธีใช้งาน
 

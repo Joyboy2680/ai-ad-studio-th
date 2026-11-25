@@ -23,11 +23,11 @@
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%2309090b'/%3E%3Cpath d='M18 18h28v8H26v8h16v8H26v10h-8V18z' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='64' y2='64' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%234285F4'/%3E%3Cstop offset='.34' stop-color='%23EA4335'/%3E%3Cstop offset='.67' stop-color='%23FBBC05'/%3E%3Cstop offset='1' stop-color='%2334A853'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E"
     />
 
-    <!-- Google Fonts: Prompt + JetBrains Mono -->
+    <!-- Google Fonts: Prompt + JetBrains Mono + Mali (Thai Handwriting) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Prompt:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Mali:wght@500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
 
@@ -440,6 +440,14 @@
                   <span>ดูไทม์ไลน์ทั้งหมด</span>
                   <span class="tab-count">15s</span>
                 </button>
+                <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="ugc-grid">
+                  <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2.5" />
+                    <path d="M3 12h18M12 3v18" />
+                  </svg>
+                  <span>ภาพ UGC 4 ช่อง</span>
+                  <span class="tab-count new-pill">1:1</span>
+                </button>
               </nav>
             </div>
 
@@ -506,6 +514,206 @@
                     <li>3. ใช้ Scenebuilder กด Jump To / Extend ต่อ Shot 2 → 3 → 4</li>
                     <li>4. เจนภาพปกและภาพโปรด้วยพรอม Imagen ทั้ง 3 ช็อต + ปิดท้ายแคปชั่น</li>
                   </ul>
+                </div>
+              </div>
+
+              <!-- TAB 5: UGC 4-Panel 1:1 Image Generator & Google Drive Save -->
+              <div id="tabUgcGrid" class="tab-panel" role="tabpanel">
+                <div class="ugc-studio-stack">
+                  <!-- Intro Banner + 1-Click Pipeline -->
+                  <div class="ugc-hero-bar">
+                    <div class="ugc-hero-info">
+                      <div class="ugc-hero-title">
+                        <span>สร้างภาพขายสินค้า UGC ตาราง 4 ช่อง (1:1 ไม่มีเส้นคั่น) → Google Drive</span>
+                      </div>
+                      <p class="ugc-hero-sub">
+                        วิเคราะห์ลิงก์สินค้าฝั่งซ้าย → สร้าง Prompt สไตล์คนใช้จริงรีวิว (ไม่มีตัวละคร • เน้นใช้งานจริง • Text ภาษาไทยลายมือ) → เจนรูปใน Gemini → บันทึกเข้า Google Drive อัตโนมัติ
+                      </p>
+                    </div>
+                    <button type="button" id="ugcOneClickBtn" class="btn-ugc-primary">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path d="m12 3 1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3Z" />
+                      </svg>
+                      วิเคราะห์ &amp; สร้าง Prompt 4 ช่อง
+                    </button>
+                  </div>
+
+                  <!-- 4 Handwritten Thai Overlay Text Inputs -->
+                  <div class="ugc-section-card">
+                    <div class="ugc-card-head">
+                      <span class="ugc-step-title">
+                        <span class="step-badge step-blue">A</span>
+                        ข้อความลายมือภาษาไทย 4 ช่อง (ปรับแก้ก่อนเจนภาพได้)
+                      </span>
+                      <button type="button" id="ugcRebuildPromptBtn" class="btn-copy-sm">
+                        อัปเดต Prompt
+                      </button>
+                    </div>
+                    <div class="ugc-labels-grid">
+                      <div class="field-group">
+                        <label class="field-label" for="ugcLabel1">ช่อง 1 (บนซ้าย)</label>
+                        <input type="text" id="ugcLabel1" class="field-input" value="ของมันต้องมี ✨ ใช้จริงทุกวัน!" />
+                      </div>
+                      <div class="field-group">
+                        <label class="field-label" for="ugcLabel2">ช่อง 2 (บนขวา)</label>
+                        <input type="text" id="ugcLabel2" class="field-input" value="ดีเทลจึ้ง เนื้อสัมผัสละมุน 👍" />
+                      </div>
+                      <div class="field-group">
+                        <label class="field-label" for="ugcLabel3">ช่อง 3 (ล่างซ้าย)</label>
+                        <input type="text" id="ugcLabel3" class="field-input" value="วางใช้จริงที่บ้าน ไม่จกตา ♡" />
+                      </div>
+                      <div class="field-group">
+                        <label class="field-label" for="ugcLabel4">ช่อง 4 (ล่างขวา)</label>
+                        <input type="text" id="ugcLabel4" class="field-input" value="คุ้มเกินราคา กดซ้ำเลย!" />
+                      </div>
+                    </div>
+
+                    <div class="prompt-box" style="margin-top: 12px;">
+                      <div class="prompt-box-header">
+                        <span class="prompt-box-label">
+                          <span class="g-dots"><span></span><span></span><span></span><span></span></span>
+                          UGC 1:1 Seamless 4-Panel Prompt (ไม่มีเส้นคั่น • ไม่มีตัวละคร • ลายมือไทย)
+                        </span>
+                        <button type="button" id="ugcCopyPromptBtn" class="btn-copy-sm">คัดลอก Prompt</button>
+                      </div>
+                      <textarea
+                        id="ugcPromptTextarea"
+                        class="ugc-prompt-editor"
+                        rows="6"
+                        placeholder="กด 'วิเคราะห์ & สร้าง Prompt 4 ช่อง' เพื่อสร้าง Prompt จากข้อมูลสินค้า/ลิงก์..."
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <!-- Step B: Generate Image in Gemini + Preview 1:1 -->
+                  <div class="ugc-section-card">
+                    <div class="ugc-card-head">
+                      <span class="ugc-step-title">
+                        <span class="step-badge step-yellow">B</span>
+                        สร้างรูปภาพ 1:1 ด้วย Gemini (แนบ Ingredient 1 อัตโนมัติถ้ามี)
+                      </span>
+                      <select id="ugcImageModelSelect" class="model-select-pill" aria-label="เลือกโมเดลสร้างภาพ Gemini">
+                        <option value="auto" selected>Auto (NB2 → Pro → Lite)</option>
+                        <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview (NB2)</option>
+                        <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview (ฟอนต์ไทยคม)</option>
+                        <option value="gemini-3.1-flash-lite-image">gemini-3.1-flash-lite-image</option>
+                        <option value="gemini-2.5-flash-image">gemini-2.5-flash-image</option>
+                      </select>
+                    </div>
+
+                    <div class="ugc-gen-actions">
+                      <button type="button" id="ugcGenGeminiImgBtn" class="btn-ugc-primary">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                          <rect x="3" y="3" width="18" height="18" rx="3" />
+                          <circle cx="9" cy="9" r="1.7" />
+                          <path d="m21 15-5-5L5 21" />
+                        </svg>
+                        สร้างรูปจริงด้วย Gemini (1:1)
+                      </button>
+                      <button type="button" id="ugcGenCanvasBtn" class="btn-secondary-sm" title="สร้างภาพตาราง 4 ช่อง 1080×1080 บนเครื่องจากรูป Ingredient 1">
+                        สร้างพรีวิว Canvas (1080×1080)
+                      </button>
+                    </div>
+
+                    <div id="ugcImageStatus" class="ugc-status-line"></div>
+
+                    <div class="ugc-preview-grid">
+                      <div class="ugc-image-stage" id="ugcImageStage">
+                        <div class="ugc-empty-state" id="ugcEmptyState">
+                          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                            <rect x="3" y="3" width="18" height="18" rx="3" />
+                            <path d="M3 12h18M12 3v18" />
+                          </svg>
+                          <div>ยังไม่ได้สร้างรูปภาพ 1:1</div>
+                          <small>กด "สร้างรูปจริงด้วย Gemini" หรือ "สร้างพรีวิว Canvas"</small>
+                        </div>
+                        <img id="ugcPreviewImg" class="ugc-preview-img hidden" alt="ภาพรีวิวสินค้า UGC 4 ช่อง 1:1" />
+                      </div>
+
+                      <!-- Step C: Save to Google Drive -->
+                      <div class="ugc-drive-panel">
+                        <div class="ugc-card-head" style="margin-bottom: 6px;">
+                          <span class="ugc-step-title">
+                            <span class="step-badge step-green">C</span>
+                            บันทึกเข้า Google Drive
+                          </span>
+                          <select id="driveMethodSelect" class="model-select-pill" aria-label="วิธีเชื่อมต่อ Google Drive">
+                            <option value="apps-script" selected>Apps Script (แนะนำ • ฟรี)</option>
+                            <option value="oauth">Drive API (OAuth Client ID)</option>
+                          </select>
+                        </div>
+
+                        <div class="field-group">
+                          <label class="field-label" for="driveFolderInput">ชื่อโฟลเดอร์ใน Google Drive</label>
+                          <input
+                            type="text"
+                            id="driveFolderInput"
+                            class="field-input"
+                            value="AI Ad Studio TH - UGC Images"
+                          />
+                        </div>
+
+                        <!-- Apps Script Config -->
+                        <div id="driveAppsScriptBox" class="field-group">
+                          <label class="field-label" for="driveWebhookInput">
+                            <span>Google Apps Script Web App URL</span>
+                            <button type="button" id="toggleAppsScriptGuideBtn" class="link-btn-inline">
+                              ดูโค้ด &amp; วิธีตั้งค่า (1 นาที)
+                            </button>
+                          </label>
+                          <input
+                            type="url"
+                            id="driveWebhookInput"
+                            class="field-input mono"
+                            placeholder="https://script.google.com/macros/s/.../exec"
+                          />
+                        </div>
+
+                        <!-- OAuth Client ID Config -->
+                        <div id="driveOAuthBox" class="field-group hidden">
+                          <label class="field-label" for="driveClientIdInput">Google OAuth 2.0 Client ID</label>
+                          <input
+                            type="text"
+                            id="driveClientIdInput"
+                            class="field-input mono"
+                            placeholder="xxxx.apps.googleusercontent.com"
+                          />
+                        </div>
+
+                        <!-- Collapsible Apps Script Code Drawer -->
+                        <div id="appsScriptGuideDrawer" class="apps-script-drawer hidden">
+                          <div class="apps-script-steps">
+                            1. เปิด <a href="https://script.new" target="_blank" rel="noopener noreferrer">script.new ↗</a> แล้ววางโค้ดด้านล่าง<br />
+                            2. กด <strong>Deploy → New deployment → Web app</strong><br />
+                            3. ตั้ง <strong>Execute as: Me</strong> และ <strong>Who has access: Anyone</strong> แล้วนำ URL (<code>.../exec</code>) มาวางช่องด้านบน
+                          </div>
+                          <div class="prompt-box">
+                            <div class="prompt-box-header">
+                              <span class="prompt-box-label">Code.gs (Google Apps Script)</span>
+                              <button type="button" id="copyAppsScriptBtn" class="btn-copy-sm">คัดลอกโค้ด</button>
+                            </div>
+                            <pre class="prompt-box-content" id="appsScriptCodePreview"></pre>
+                          </div>
+                        </div>
+
+                        <div class="ugc-drive-actions">
+                          <button type="button" id="ugcSaveDriveBtn" class="btn-drive-save" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M12 16V4m0 0 4 4m-4-4-4 4" />
+                              <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                            </svg>
+                            บันทึกรูปเข้า Google Drive
+                          </button>
+                          <button type="button" id="ugcDownloadPngBtn" class="btn-secondary-sm" disabled>
+                            ↓ PNG
+                          </button>
+                        </div>
+
+                        <div id="driveUploadResult" class="drive-result-box"></div>
+                        <div id="driveHistoryList" class="drive-history-list"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

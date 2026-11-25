@@ -8,7 +8,23 @@ import {
   SAMPLE_PRODUCTS,
   buildLocalStudioPlan
 } from './presets.js';
-import { autoFillFromUrl, generateAdStudioPlan } from './gemini.js';
+import {
+  autoFillFromUrl,
+  generateAdStudioPlan,
+  analyzeProductAndBuildUgcPrompt,
+  buildUgc4GridLocalPrompt,
+  generateUgcImageWithGemini
+} from './gemini.js';
+import {
+  APPS_SCRIPT_TEMPLATE,
+  uploadViaAppsScript,
+  uploadViaOAuthDrive,
+  STORAGE_DRIVE_WEBHOOK,
+  STORAGE_DRIVE_CLIENT_ID,
+  STORAGE_DRIVE_FOLDER,
+  STORAGE_DRIVE_HISTORY
+} from './drive.js';
+import { renderUgc4GridCanvas } from './ugc-canvas.js';
 
 const STORAGE_API_KEY = 'ai_ad_studio_th_gemini_api_key';
 const MAX_IMAGE_DIM = 640;
@@ -33,7 +49,9 @@ const state = {
   activeTab: 'slides',
   currentSlide: 0,
   isGenerating: false,
-  plan: null
+  plan: null,
+  ugcImage: null, // { dataUrl, base64, mimeType, modelId }
+  driveHistory: []
 };
 
 // DOM References
@@ -84,6 +102,7 @@ function cacheDom() {
     'tabImagen',
     'tabCaptions',
     'tabTimeline',
+    'tabUgcGrid',
     'timecodePills',
     'prevSlideBtn',
     'nextSlideBtn',
@@ -94,6 +113,34 @@ function cacheDom() {
     'captionsContainer',
     'timelineVisualBar',
     'timelineList',
+    'ugcOneClickBtn',
+    'ugcRebuildPromptBtn',
+    'ugcLabel1',
+    'ugcLabel2',
+    'ugcLabel3',
+    'ugcLabel4',
+    'ugcCopyPromptBtn',
+    'ugcPromptTextarea',
+    'ugcImageModelSelect',
+    'ugcGenGeminiImgBtn',
+    'ugcGenCanvasBtn',
+    'ugcImageStatus',
+    'ugcEmptyState',
+    'ugcPreviewImg',
+    'driveMethodSelect',
+    'driveFolderInput',
+    'driveAppsScriptBox',
+    'driveWebhookInput',
+    'toggleAppsScriptGuideBtn',
+    'driveOAuthBox',
+    'driveClientIdInput',
+    'appsScriptGuideDrawer',
+    'copyAppsScriptBtn',
+    'appsScriptCodePreview',
+    'ugcSaveDriveBtn',
+    'ugcDownloadPngBtn',
+    'driveUploadResult',
+    'driveHistoryList',
     'toastContainer'
   ];
   ids.forEach((id) => {
@@ -1000,11 +1047,12 @@ function switchTab(tabId) {
     slides: el.tabSlides,
     imagen: el.tabImagen,
     captions: el.tabCaptions,
-    timeline: el.tabTimeline
+    timeline: el.tabTimeline,
+    'ugc-grid': el.tabUgcGrid
   };
 
   Object.entries(panelMap).forEach(([key, panel]) => {
-    panel.classList.toggle('active', key === tabId);
+    if (panel) panel.classList.toggle('active', key === tabId);
   });
 }
 
@@ -1092,6 +1140,310 @@ function setupSwipeAndKeyboard() {
 }
 
 /* ==========================================================================
+   Tab 5: UGC 4-Panel 1:1 Image Generator & Google Drive Integration
+   ========================================================================== */
+
+function getUgcLabels() {
+  return [
+    { thaiText: el.ugcLabel1.value.trim() || 'ของมันต้องมี ✨ ใช้จริงทุกวัน!' },
+    { thaiText: el.ugcLabel2.value.trim() || 'ดีเทลจึ้ง เนื้อสัมผัสละมุน 👍' },
+    { thaiText: el.ugcLabel3.value.trim() || 'วางใช้จริงที่บ้าน ไม่จกตา ♡' },
+    { thaiText: el.ugcLabel4.value.trim() || 'คุ้มเกินราคา กดซ้ำเลย!' }
+  ];
+}
+
+function rebuildUgcPromptFromInputs() {
+  const payload = collectInputPayload();
+  const built = buildUgc4GridLocalPrompt(payload);
+  const customLabels = getUgcLabels();
+
+  // Replace the 4 panel Thai handwritten text lines with user's edited labels
+  let prompt = built.prompt;
+  built.panels.forEach((p, i) => {
+    prompt = prompt.replace(p.thaiText, customLabels[i].thaiText);
+  });
+
+  el.ugcPromptTextarea.value = prompt;
+}
+
+function setUgcImagePreview(imgObj) {
+  state.ugcImage = imgObj;
+  el.ugcPreviewImg.src = imgObj.dataUrl;
+  el.ugcPreviewImg.classList.remove('hidden');
+  el.ugcEmptyState.classList.add('hidden');
+  el.ugcSaveDriveBtn.disabled = false;
+  el.ugcDownloadPngBtn.disabled = false;
+}
+
+function renderDriveHistory() {
+  if (!el.driveHistoryList) return;
+  if (!state.driveHistory.length) {
+    el.driveHistoryList.innerHTML = '';
+    return;
+  }
+  el.driveHistoryList.innerHTML =
+    '<div class="field-hint" style="margin-top:4px;">บันทึกล่าสุดเข้า Google Drive:</div>' +
+    state.driveHistory
+      .slice(0, 4)
+      .map(
+        (item) => `
+      <div class="drive-history-item">
+        <span>${escapeHtml(item.fileName)}</span>
+        <a href="${escapeHtml(item.webViewLink)}" target="_blank" rel="noopener noreferrer">เปิดใน Drive ↗</a>
+      </div>
+    `
+      )
+      .join('');
+}
+
+function initUgcGridStudio() {
+  // Populate Apps Script template
+  if (el.appsScriptCodePreview) {
+    el.appsScriptCodePreview.textContent = APPS_SCRIPT_TEMPLATE;
+  }
+
+  // Restore saved Drive settings & history
+  const savedWebhook = localStorage.getItem(STORAGE_DRIVE_WEBHOOK) || '';
+  const savedClientId = localStorage.getItem(STORAGE_DRIVE_CLIENT_ID) || '';
+  const savedFolder = localStorage.getItem(STORAGE_DRIVE_FOLDER) || 'AI Ad Studio TH - UGC Images';
+  try {
+    state.driveHistory = JSON.parse(localStorage.getItem(STORAGE_DRIVE_HISTORY) || '[]');
+  } catch {
+    state.driveHistory = [];
+  }
+
+  el.driveWebhookInput.value = savedWebhook;
+  el.driveClientIdInput.value = savedClientId;
+  el.driveFolderInput.value = savedFolder;
+  renderDriveHistory();
+
+  el.driveWebhookInput.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_DRIVE_WEBHOOK, el.driveWebhookInput.value.trim());
+  });
+  el.driveClientIdInput.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_DRIVE_CLIENT_ID, el.driveClientIdInput.value.trim());
+  });
+  el.driveFolderInput.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_DRIVE_FOLDER, el.driveFolderInput.value.trim());
+  });
+
+  // Switch Drive method UI
+  el.driveMethodSelect.addEventListener('change', () => {
+    const isOAuth = el.driveMethodSelect.value === 'oauth';
+    el.driveAppsScriptBox.classList.toggle('hidden', isOAuth);
+    el.driveOAuthBox.classList.toggle('hidden', !isOAuth);
+    if (isOAuth) {
+      el.appsScriptGuideDrawer.classList.add('hidden');
+    }
+  });
+
+  el.toggleAppsScriptGuideBtn.addEventListener('click', () => {
+    el.appsScriptGuideDrawer.classList.toggle('hidden');
+  });
+
+  el.copyAppsScriptBtn.addEventListener('click', () => {
+    copyText(APPS_SCRIPT_TEMPLATE, el.copyAppsScriptBtn, 'คัดลอกโค้ด Google Apps Script แล้ว!');
+  });
+
+  el.ugcCopyPromptBtn.addEventListener('click', () => {
+    copyText(el.ugcPromptTextarea.value, el.ugcCopyPromptBtn, 'คัดลอก Prompt ภาพ 4 ช่องแล้ว!');
+  });
+
+  el.ugcRebuildPromptBtn.addEventListener('click', () => {
+    rebuildUgcPromptFromInputs();
+    showToast('อัปเดต Prompt ตามข้อความลายมือ 4 ช่องแล้ว', 'info');
+  });
+
+  // Step A: Analyze product URL + build UGC 4-panel prompt
+  el.ugcOneClickBtn.addEventListener('click', async () => {
+    const orig = el.ugcOneClickBtn.innerHTML;
+    el.ugcOneClickBtn.disabled = true;
+    el.ugcOneClickBtn.textContent = 'กำลังวิเคราะห์ & สร้าง Prompt...';
+    el.ugcImageStatus.textContent = 'กำลังวิเคราะห์ลิงก์สินค้าและสร้าง Prompt 1:1 ตาราง 4 ช่องไม่มีเส้นคั่น...';
+
+    try {
+      const payload = collectInputPayload();
+      const res = await analyzeProductAndBuildUgcPrompt(state.apiKey.trim(), {
+        url: payload.productUrl,
+        productName: payload.productName,
+        benefits: payload.benefits,
+        pricePromo: payload.pricePromo,
+        audience: payload.audience,
+        visualDetails: payload.visualDetails,
+        ingredient1: state.ingredient1,
+        preferredModel: state.preferredModel
+      });
+
+      if (res.productName) el.productNameInput.value = res.productName;
+      if (res.benefits) el.productBenefitsInput.value = res.benefits;
+      if (res.pricePromo) el.productPromoInput.value = res.pricePromo;
+      if (res.audience) el.productAudienceInput.value = res.audience;
+      if (res.visualDetails) el.productVisualInput.value = res.visualDetails;
+      if (res.characterAnchor) el.characterAnchorInput.value = res.characterAnchor;
+
+      if (Array.isArray(res.panels) && res.panels.length >= 4) {
+        el.ugcLabel1.value = res.panels[0].thaiText || el.ugcLabel1.value;
+        el.ugcLabel2.value = res.panels[1].thaiText || el.ugcLabel2.value;
+        el.ugcLabel3.value = res.panels[2].thaiText || el.ugcLabel3.value;
+        el.ugcLabel4.value = res.panels[3].thaiText || el.ugcLabel4.value;
+      }
+
+      el.ugcPromptTextarea.value = res.prompt;
+      el.ugcImageStatus.textContent =
+        res.source === 'gemini'
+          ? `สร้าง Prompt สำเร็จด้วย ${res.promptModelId || res.analyzedBy} — กด "สร้างรูปจริงด้วย Gemini (1:1)" ได้เลย`
+          : 'สร้าง Prompt 4 ช่องเรียบร้อยแล้ว! (กด "สร้างรูปจริงด้วย Gemini" หรือ "สร้างพรีวิว Canvas")';
+      showToast('วิเคราะห์สินค้าและสร้าง Prompt 4 ช่อง 1:1 เรียบร้อยแล้ว!', 'success');
+    } catch (err) {
+      rebuildUgcPromptFromInputs();
+      el.ugcImageStatus.textContent = `ใช้เทมเพลต Prompt อัตโนมัติแทน (${err.message})`;
+      showToast(`วิเคราะห์ลิงก์ไม่สำเร็จ: ${err.message}`, 'warn');
+    } finally {
+      el.ugcOneClickBtn.disabled = false;
+      el.ugcOneClickBtn.innerHTML = orig;
+    }
+  });
+
+  // Step B1: Generate real image via Gemini Image Generation API (Nano Banana)
+  el.ugcGenGeminiImgBtn.addEventListener('click', async () => {
+    const prompt = el.ugcPromptTextarea.value.trim();
+    if (!prompt) {
+      rebuildUgcPromptFromInputs();
+    }
+
+    const orig = el.ugcGenGeminiImgBtn.innerHTML;
+    el.ugcGenGeminiImgBtn.disabled = true;
+    el.ugcGenGeminiImgBtn.textContent = 'กำลังเจนภาพ 1:1 ใน Gemini...';
+    el.ugcImageStatus.textContent = 'กำลังส่ง Prompt เข้าโมเดลสร้างภาพ Gemini (อัตราส่วน 1:1)...';
+
+    try {
+      const imgResult = await generateUgcImageWithGemini(state.apiKey.trim(), {
+        prompt: el.ugcPromptTextarea.value.trim(),
+        preferredImageModel: el.ugcImageModelSelect.value,
+        ingredient1: state.ingredient1,
+        aspectRatio: '1:1'
+      });
+
+      setUgcImagePreview(imgResult);
+      el.ugcImageStatus.textContent = `✓ สร้างรูปภาพสำเร็จด้วย ${imgResult.modelId} (1:1) — พร้อมบันทึกลง Google Drive`;
+      showToast(`สร้างภาพ UGC 4 ช่องด้วย ${imgResult.modelId} สำเร็จ!`, 'success');
+    } catch (err) {
+      el.ugcImageStatus.textContent = `⚠️ ${err.message}`;
+      showToast(err.message, err?.status === 429 ? 'warn' : 'error');
+    } finally {
+      el.ugcGenGeminiImgBtn.disabled = false;
+      el.ugcGenGeminiImgBtn.innerHTML = orig;
+    }
+  });
+
+  // Step B2: Local 1080x1080 Canvas 2x2 Seamless Composer (works anytime, 0 quota)
+  el.ugcGenCanvasBtn.addEventListener('click', async () => {
+    el.ugcGenCanvasBtn.disabled = true;
+    el.ugcImageStatus.textContent = 'กำลังประกอบภาพตาราง 4 ช่อง 1:1 (1080×1080) แบบไม่มีเส้นคั่น...';
+    try {
+      const composed = await renderUgc4GridCanvas({
+        productName: el.productNameInput.value.trim() || 'สินค้าแนะนำ',
+        panels: getUgcLabels(),
+        ingredient1: state.ingredient1
+      });
+      setUgcImagePreview(composed);
+      el.ugcImageStatus.textContent =
+        '✓ สร้างพรีวิว 1080×1080 สำเร็จ (ไม่มีเส้นคั่น + ฟอนต์ไทยลายมือ Mali) — พร้อมบันทึกเข้า Google Drive หรือดาวน์โหลด PNG';
+      showToast('สร้างภาพพรีวิว 1:1 (1080×1080) เรียบร้อยแล้ว!', 'success');
+    } catch (err) {
+      showToast(`สร้างพรีวิว Canvas ไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      el.ugcGenCanvasBtn.disabled = false;
+    }
+  });
+
+  // Download PNG locally
+  el.ugcDownloadPngBtn.addEventListener('click', () => {
+    if (!state.ugcImage?.dataUrl) return;
+    const safeName = (el.productNameInput.value.trim() || 'ugc-product')
+      .replace(/[^a-zA-Z0-9ก-๙_-]+/g, '-')
+      .slice(0, 32);
+    const a = document.createElement('a');
+    a.href = state.ugcImage.dataUrl;
+    a.download = `${safeName}-ugc-4grid-1x1.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('ดาวน์โหลดรูปภาพ 1:1 (.png) แล้ว', 'success');
+  });
+
+  // Step C: Upload generated image to Google Drive
+  el.ugcSaveDriveBtn.addEventListener('click', async () => {
+    if (!state.ugcImage?.base64) {
+      showToast('กรุณาสร้างรูปภาพ 1:1 ก่อนบันทึกเข้า Google Drive', 'warn');
+      return;
+    }
+
+    const method = el.driveMethodSelect.value;
+    const folderName = el.driveFolderInput.value.trim() || 'AI Ad Studio TH - UGC Images';
+    const safeName = (el.productNameInput.value.trim() || 'ugc-product')
+      .replace(/[^a-zA-Z0-9ก-๙_-]+/g, '-')
+      .slice(0, 32);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `${safeName}-ugc-4grid-${stamp}.png`;
+
+    const orig = el.ugcSaveDriveBtn.innerHTML;
+    el.ugcSaveDriveBtn.disabled = true;
+    el.ugcSaveDriveBtn.textContent = 'กำลังอัปโหลดเข้า Google Drive...';
+    el.driveUploadResult.innerHTML = '';
+
+    try {
+      const uploaded =
+        method === 'oauth'
+          ? await uploadViaOAuthDrive({
+              clientId: el.driveClientIdInput.value.trim(),
+              base64: state.ugcImage.base64,
+              mimeType: state.ugcImage.mimeType || 'image/png',
+              filename,
+              folderName
+            })
+          : await uploadViaAppsScript({
+              webhookUrl: el.driveWebhookInput.value.trim(),
+              base64: state.ugcImage.base64,
+              mimeType: state.ugcImage.mimeType || 'image/png',
+              filename,
+              folderName
+            });
+
+      el.driveUploadResult.innerHTML = `
+        <div><strong>✓ บันทึกเข้า Google Drive สำเร็จ!</strong> (${escapeHtml(uploaded.method)})</div>
+        <div>ไฟล์: <code>${escapeHtml(uploaded.fileName)}</code></div>
+        <div><a href="${escapeHtml(uploaded.webViewLink)}" target="_blank" rel="noopener noreferrer">เปิดดูรูปใน Google Drive ↗</a>${
+          uploaded.folderUrl
+            ? ` • <a href="${escapeHtml(uploaded.folderUrl)}" target="_blank" rel="noopener noreferrer">เปิดโฟลเดอร์ ↗</a>`
+            : ''
+        }</div>
+      `;
+
+      state.driveHistory.unshift({
+        fileName: uploaded.fileName,
+        webViewLink: uploaded.webViewLink,
+        savedAt: new Date().toISOString()
+      });
+      state.driveHistory = state.driveHistory.slice(0, 10);
+      localStorage.setItem(STORAGE_DRIVE_HISTORY, JSON.stringify(state.driveHistory));
+      renderDriveHistory();
+
+      showToast('บันทึกรูปภาพเข้า Google Drive เรียบร้อยแล้ว!', 'success');
+    } catch (err) {
+      el.driveUploadResult.innerHTML = `<div style="color:#fca5a5;">⚠️ ${escapeHtml(err.message)}</div>`;
+      showToast(`บันทึก Google Drive ไม่สำเร็จ: ${err.message}`, 'error');
+    } finally {
+      el.ugcSaveDriveBtn.disabled = false;
+      el.ugcSaveDriveBtn.innerHTML = orig;
+    }
+  });
+
+  // Pre-build initial prompt from default product so Tab 5 looks ready immediately
+  rebuildUgcPromptFromInputs();
+}
+
+/* ==========================================================================
    Initialization
    ========================================================================== */
 
@@ -1132,7 +1484,7 @@ function updateApiStatusDot() {
   const connected = Boolean(state.apiKey.trim());
   el.apiStatusDot.classList.toggle('connected', connected);
   el.apiStatusDot.title = connected
-    ? 'เชื่อมต่อ Gemini 3.8 Flash API Key แล้ว'
+    ? 'เชื่อมต่อ Gemini 3.5 Flash-Lite / 3.8 Flash API Key แล้ว'
     : 'ยังไม่ได้ใส่ API Key (ใช้งานโหมด Demo ได้ทันที)';
 }
 
@@ -1158,6 +1510,7 @@ function init() {
   document.querySelectorAll('[data-sample]').forEach((btn) => {
     btn.addEventListener('click', () => {
       loadSampleProduct(btn.dataset.sample);
+      rebuildUgcPromptFromInputs();
     });
   });
 
@@ -1197,6 +1550,7 @@ function init() {
   loadSampleProduct('serum', true);
   state.plan = buildLocalStudioPlan(collectInputPayload());
   renderAllOutputs();
+  initUgcGridStudio();
 }
 
 document.addEventListener('DOMContentLoaded', init);
