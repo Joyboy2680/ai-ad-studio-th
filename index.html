@@ -95,13 +95,14 @@
             id="modelSelect"
             class="model-select-pill"
             aria-label="เลือกโมเดล Gemini"
-            title="ระบบจะสลับโมเดลสำรองให้อัตโนมัติหากติดโควตา 429"
+            title="ใช้ 3.5 Flash-Lite & 3.1 Flash-Lite (500/วัน) เป็นหลัก พร้อมสลับอัตโนมัติเมื่อเจอ 429"
           >
-            <option value="auto" selected>Auto (3.5 Lite → 3.8 Flash)</option>
-            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+            <option value="auto" selected>Auto (3.5 Lite → 3.1 Lite)</option>
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (500/วัน)</option>
+            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (500/วัน)</option>
             <option value="gemini-3.8-flash">gemini-3.8-flash</option>
             <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+            <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
           </select>
           <a
             class="api-help-link"
@@ -129,7 +130,7 @@
                 <span class="step-badge">01</span>
                 AI Auto-Fill จากลิงก์ &amp; ข้อมูลสินค้า
               </h2>
-              <span class="tech-pill">gemini-3.8-flash + Search</span>
+              <span class="tech-pill">3.5 Flash-Lite + Search</span>
             </div>
 
             <div class="form-stack">

@@ -15,14 +15,21 @@ const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 export const MODEL_CANDIDATES = [
   {
     id: 'gemini-3.5-flash-lite',
-    label: 'Gemini 3.5 Flash-Lite (ไว/Free Tier เยอะ)',
+    label: 'Gemini 3.5 Flash-Lite (500/วัน • ไวสุด)',
+    fastLabel: 'thinkingLevel: MINIMAL',
+    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    supportsTemperature: false
+  },
+  {
+    id: 'gemini-3.1-flash-lite',
+    label: 'Gemini 3.1 Flash-Lite (500/วัน • สำรองหลัก)',
     fastLabel: 'thinkingLevel: MINIMAL',
     thinkingConfig: { thinkingLevel: 'MINIMAL' },
     supportsTemperature: false
   },
   {
     id: 'gemini-3.8-flash',
-    label: 'Gemini 3.8 Flash (ฉลาดสุด)',
+    label: 'Gemini 3.8 Flash',
     fastLabel: 'thinkingLevel: LOW',
     thinkingConfig: { thinkingLevel: 'LOW' },
     supportsTemperature: false
@@ -35,10 +42,10 @@ export const MODEL_CANDIDATES = [
     supportsTemperature: false
   },
   {
-    id: 'gemini-3.1-flash-lite',
-    label: 'Gemini 3.1 Flash-Lite',
-    fastLabel: 'thinkingLevel: MINIMAL',
-    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    id: 'gemini-4-hydrogen',
+    label: 'Gemini 4 Hydrogen',
+    fastLabel: 'thinkingLevel: LOW',
+    thinkingConfig: { thinkingLevel: 'LOW' },
     supportsTemperature: false
   }
 ];
@@ -113,8 +120,15 @@ function formatFriendlyError(error, status) {
 /**
  * Calls Gemini generateContent endpoint with automatic model fallback on 404/429/503.
  */
-async function callGeminiWithFallback(apiKey, buildBodyFn, preferredModelId = 'auto', signal) {
-  const models = getOrderedModels(preferredModelId);
+async function callGeminiWithFallback(
+  apiKey,
+  buildBodyFn,
+  preferredModelId = 'auto',
+  signal,
+  maxModels = null
+) {
+  const ordered = getOrderedModels(preferredModelId);
+  const models = maxModels ? ordered.slice(0, maxModels) : ordered;
   let lastError = null;
   let lastStatus = 0;
 
@@ -282,7 +296,9 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
           }
           return reqBody;
         },
-        preferredModel
+        preferredModel,
+        undefined,
+        2
       );
 
       const parsed = extractJsonObject(result.text);
