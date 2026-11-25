@@ -68,42 +68,45 @@
         </div>
 
         <div class="header-actions">
-          <div class="api-key-widget" title="บันทึกเฉพาะในเบราว์เซอร์ของคุณ (localStorage)">
-            <span class="api-status-dot" id="apiStatusDot" aria-hidden="true"></span>
-            <input
-              type="password"
-              id="apiKeyInput"
-              class="api-key-input"
-              placeholder="ใส่ Gemini API Key (หรือใช้ Demo)"
-              autocomplete="off"
-              aria-label="Gemini API Key"
-            />
-            <button
-              type="button"
-              id="toggleApiKeyBtn"
-              class="icon-btn-mini"
-              title="แสดง/ซ่อน API Key"
-              aria-label="แสดงหรือซ่อน API Key"
+          <div class="command-toolbar">
+            <div class="api-key-widget" title="บันทึกเฉพาะในเบราว์เซอร์ของคุณ (localStorage)">
+              <span class="api-status-dot" id="apiStatusDot" aria-hidden="true"></span>
+              <input
+                type="password"
+                id="apiKeyInput"
+                class="api-key-input"
+                placeholder="ใส่ Gemini API Key (หรือใช้ Demo)"
+                autocomplete="off"
+                aria-label="Gemini API Key"
+              />
+              <button
+                type="button"
+                id="toggleApiKeyBtn"
+                class="icon-btn-mini"
+                title="แสดง/ซ่อน API Key"
+                aria-label="แสดงหรือซ่อน API Key"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+            <span class="toolbar-divider" aria-hidden="true"></span>
+            <select
+              id="modelSelect"
+              class="model-select-pill"
+              aria-label="เลือกโมเดล Gemini"
+              title="ใช้ 3.5 Flash-Lite & 3.1 Flash-Lite (500/วัน) เป็นหลัก พร้อมสลับอัตโนมัติเมื่อเจอ 429"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
+              <option value="auto" selected>Auto (3.5 Lite → 3.1 Lite)</option>
+              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (500/วัน)</option>
+              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (500/วัน)</option>
+              <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+              <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+              <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
+            </select>
           </div>
-          <select
-            id="modelSelect"
-            class="model-select-pill"
-            aria-label="เลือกโมเดล Gemini"
-            title="ใช้ 3.5 Flash-Lite & 3.1 Flash-Lite (500/วัน) เป็นหลัก พร้อมสลับอัตโนมัติเมื่อเจอ 429"
-          >
-            <option value="auto" selected>Auto (3.5 Lite → 3.1 Lite)</option>
-            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (500/วัน)</option>
-            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (500/วัน)</option>
-            <option value="gemini-3.8-flash">gemini-3.8-flash</option>
-            <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-            <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
-          </select>
           <a
             class="api-help-link"
             href="https://aistudio.google.com/apikey"
@@ -127,7 +130,7 @@
           <section class="glass-card card-pad">
             <div class="section-header">
               <h2 class="section-title">
-                <span class="step-badge">01</span>
+                <span class="step-badge step-blue">01</span>
                 AI Auto-Fill จากลิงก์ &amp; ข้อมูลสินค้า
               </h2>
               <span class="tech-pill">3.5 Flash-Lite + Search</span>
@@ -229,7 +232,7 @@
           <section class="glass-card card-pad">
             <div class="section-header">
               <h2 class="section-title">
-                <span class="step-badge">02</span>
+                <span class="step-badge step-green">02</span>
                 Ingredient 1 + 2 &amp; ล็อกตัวละคร
               </h2>
               <span class="tech-pill green">Auto-Compress ≤ 640px</span>
@@ -241,7 +244,7 @@
                 <input type="file" id="ingredient1Input" class="ingredient-file-input" accept="image/*" />
                 <div class="ingredient-placeholder">
                   <div class="ingredient-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                       <rect x="3" y="3" width="18" height="18" rx="3" />
                       <circle cx="9" cy="9" r="2" />
                       <path d="m21 15-5-5L5 21" />
@@ -266,7 +269,7 @@
                 <input type="file" id="ingredient2Input" class="ingredient-file-input" accept="image/*" />
                 <div class="ingredient-placeholder">
                   <div class="ingredient-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+                    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                       <circle cx="12" cy="8" r="4" />
                       <path d="M5 20a7 7 0 0 1 14 0" />
                     </svg>
@@ -316,7 +319,7 @@
           <section class="glass-card card-pad">
             <div class="section-header">
               <h2 class="section-title">
-                <span class="step-badge">03</span>
+                <span class="step-badge step-yellow">03</span>
                 เลือก 3 โหมด Google Flow
               </h2>
               <span class="tech-pill">Veo 3 / Veo 2 / Scenebuilder</span>
@@ -324,9 +327,9 @@
 
             <div id="flowModesContainer" class="flow-modes-grid"></div>
 
-            <div class="section-header" style="margin-top: 18px;">
+            <div class="section-header" style="margin-top: 20px;">
               <h2 class="section-title">
-                <span class="step-badge">04</span>
+                <span class="step-badge step-red">04</span>
                 5 แนวทางคลิปขายของ 15 วิ
               </h2>
               <span class="tech-pill yellow">0–15s Pacing</span>
@@ -335,11 +338,11 @@
             <div id="clipStylesContainer" class="styles-list"></div>
           </section>
 
-          <!-- Card 4: Generate CTA + thinkingBudget: 0 + 15s Progress Bar -->
+          <!-- Card 4: Generate CTA + Fast Processing + 15s Progress Bar -->
           <section class="glass-card generate-card">
             <button type="button" id="generateBtn" class="btn-generate-main">
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
               </svg>
               <span id="generateBtnText">สร้างพรอม Google Flow &amp; Imagen (15 วิ)</span>
             </button>
@@ -347,7 +350,7 @@
             <div class="generate-meta-row">
               <span class="budget-indicator">
                 <span class="budget-dot" aria-hidden="true"></span>
-                Model: <strong>gemini-3.8-flash</strong> • <code>thinkingLevel: LOW</code>
+                Engine: <strong>3.5 Flash-Lite</strong> • <code>Fast Mode</code>
               </span>
               <span class="field-hint">ประมวลผลไวพิเศษ + ครบ 4 แท็บ</span>
             </div>
@@ -375,46 +378,70 @@
              RIGHT PANEL (7 Columns): 4 Tabs + Slide Carousel + Copy All
              ================================================================ -->
         <section class="panel-right" aria-label="ผลลัพธ์พรอมและสไลด์คลิป">
-          <div class="glass-card">
-            <!-- Output Top Bar -->
+          <div class="glass-card output-shell">
+            <!-- Output Top Bar (Title + Pinned Actions Row, Meta Ribbon Below) -->
             <div class="output-header">
-              <div class="output-title-group">
-                <h2 class="output-heading">สตูดิโอผลลัพธ์พร้อมใช้งาน</h2>
-                <div class="output-meta-chips" id="outputMetaChips"></div>
+              <div class="output-header-top">
+                <div class="output-heading-wrap">
+                  <span class="studio-live-dot" aria-hidden="true"></span>
+                  <h2 class="output-heading">สตูดิโอผลลัพธ์พร้อมใช้งาน</h2>
+                </div>
+                <div class="output-actions">
+                  <button type="button" id="exportTxtBtn" class="btn-secondary-sm" title="ดาวน์โหลดไฟล์ .txt">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                    </svg>
+                    .TXT
+                  </button>
+                  <button type="button" id="copyAllBtn" class="btn-copy-all">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                      <rect x="9" y="9" width="13" height="13" rx="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copy All
+                  </button>
+                </div>
               </div>
-              <div class="output-actions">
-                <button type="button" id="exportTxtBtn" class="btn-secondary-sm" title="ดาวน์โหลดไฟล์ .txt">
-                  ↓ .TXT
-                </button>
-                <button type="button" id="copyAllBtn" class="btn-copy-all">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
-                    <rect x="9" y="9" width="13" height="13" rx="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                  Copy All
-                </button>
-              </div>
+              <div class="output-meta-chips" id="outputMetaChips"></div>
             </div>
 
-            <!-- 4 Navigation Tabs -->
-            <nav class="tabs-nav" id="tabsNav" role="tablist" aria-label="หมวดผลลัพธ์ 4 แท็บ">
-              <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="slides">
-                สไลด์คลิป 0-15 วิ
-                <span class="tab-count">4</span>
-              </button>
-              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="imagen">
-                พรอมภาพนิ่ง 3
-                <span class="tab-count">3</span>
-              </button>
-              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="captions">
-                แคปชั่น &amp; #
-                <span class="tab-count">3+</span>
-              </button>
-              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="timeline">
-                ดูไทม์ไลน์ทั้งหมด
-                <span class="tab-count">15s</span>
-              </button>
-            </nav>
+            <!-- 4 Segmented Glass Navigation Tabs -->
+            <div class="tabs-shell">
+              <nav class="tabs-nav" id="tabsNav" role="tablist" aria-label="หมวดผลลัพธ์ 4 แท็บ">
+                <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="slides">
+                  <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="4" width="20" height="16" rx="3" />
+                    <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none" />
+                  </svg>
+                  <span>สไลด์คลิป 0-15 วิ</span>
+                  <span class="tab-count">4</span>
+                </button>
+                <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="imagen">
+                  <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="3" />
+                    <circle cx="9" cy="9" r="1.6" />
+                    <path d="m21 15-4.5-4.5L6 21" />
+                  </svg>
+                  <span>พรอมภาพนิ่ง 3</span>
+                  <span class="tab-count">3</span>
+                </button>
+                <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="captions">
+                  <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18" />
+                  </svg>
+                  <span>แคปชั่น &amp; #</span>
+                  <span class="tab-count">3+</span>
+                </button>
+                <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="timeline">
+                  <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                  <span>ดูไทม์ไลน์ทั้งหมด</span>
+                  <span class="tab-count">15s</span>
+                </button>
+              </nav>
+            </div>
 
             <!-- Tab Content Panels -->
             <div class="tab-panels-body">
@@ -492,7 +519,7 @@
         <strong>AI Ad Studio TH (Google Flow Edition)</strong> — สร้างพรอม Imagen &amp; คลิปขายของ 15 วิ
       </div>
       <div>
-        Powered by <code>gemini-3.8-flash</code> • <code>thinkingLevel: LOW</code> • Google Search Grounding
+        Powered by <code>gemini-3.5-flash-lite</code> • <code>Fast Mode</code> • URL Context &amp; Google Search Grounding
       </div>
     </footer>
 
