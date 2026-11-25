@@ -471,7 +471,7 @@ export function buildLocalStudioPlan(input) {
 
   return {
     source: 'demo',
-    modelLabel: 'Demo Engine (พร้อมเชื่อมต่อ gemini-2.5-flash)',
+    modelLabel: 'Demo Engine (พร้อมเชื่อมต่อ gemini-3.8-flash)',
     productName,
     flowMode: mode.id,
     flowModeName: `${mode.name} (${mode.tag})`,

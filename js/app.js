@@ -16,7 +16,7 @@ const MAX_IMAGE_DIM = 640;
 const PROGRESS_STAGES = [
   { maxSec: 3, label: '0–3 วิ • วิเคราะห์สินค้า & องค์ประกอบ Ingredient 1+2...' },
   { maxSec: 6, label: '3–6 วิ • ล็อกตัวละคร & ตั้งค่าโหมด Google Flow...' },
-  { maxSec: 10, label: '6–10 วิ • เขียนสคริปต์ & พรอมคลิป 0–15 วิ (thinkingBudget: 0)...' },
+  { maxSec: 10, label: '6–10 วิ • เขียนสคริปต์ & พรอมคลิป 0–15 วิ (Fast Mode)...' },
   { maxSec: 13, label: '10–13 วิ • สร้างพรอมภาพนิ่ง Imagen 3 ช็อตหลัก...' },
   { maxSec: 15, label: '13–15 วิ • เรียบเรียงแคปชั่น แฮชแท็ก & ตรวจสอบความต่อเนื่อง...' }
 ];
@@ -421,7 +421,10 @@ async function handleAutoFill() {
           .join('');
     }
 
-    showToast('AI Auto-Fill จากลิงก์ด้วย Google Search Grounding สำเร็จ!', 'success');
+    showToast(
+      `AI Auto-Fill สำเร็จด้วย ${result.modelId} + Google Search Grounding!`,
+      'success'
+    );
   } catch (err) {
     showToast(`Auto-Fill ไม่สำเร็จ: ${err.message}`, 'error');
   } finally {
@@ -471,7 +474,7 @@ async function handleGenerate() {
 
   state.isGenerating = true;
   el.generateBtn.disabled = true;
-  el.generateBtnText.textContent = 'กำลังประมวลผล (thinkingBudget: 0)...';
+  el.generateBtnText.textContent = 'กำลังประมวลผลด้วย Gemini 3.8 Flash...';
   el.progressPanel.classList.add('visible');
 
   const TOTAL_SECONDS = 15;
@@ -1089,7 +1092,7 @@ function updateApiStatusDot() {
   const connected = Boolean(state.apiKey.trim());
   el.apiStatusDot.classList.toggle('connected', connected);
   el.apiStatusDot.title = connected
-    ? 'เชื่อมต่อ Gemini 2.5 Flash API Key แล้ว'
+    ? 'เชื่อมต่อ Gemini 3.8 Flash API Key แล้ว'
     : 'ยังไม่ได้ใส่ API Key (ใช้งานโหมด Demo ได้ทันที)';
 }
 

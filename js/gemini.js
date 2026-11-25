@@ -1,13 +1,47 @@
 /* ==========================================================================
-   AI Ad Studio TH (Google Flow Edition) — Gemini 2.5 Flash API Client
+   AI Ad Studio TH (Google Flow Edition) — Gemini API Client
+   - Primary Model: gemini-3.8-flash (thinkingLevel: "LOW")
+   - Auto-Fallback Chain: gemini-3.5-flash-lite -> gemini-3.6-flash -> gemini-2.5-flash
    - AI Auto-Fill from URL with Google Search Grounding (google_search tool)
-   - Full 15s Flow & Imagen Generation with thinkingBudget: 0 & Multimodal Vision
+   - Full 15s Flow & Imagen Generation with Multimodal Vision (Ingredient 1+2)
    ========================================================================== */
 
 import { FLOW_MODES, CLIP_STYLES } from './presets.js';
 
-const GEMINI_ENDPOINT =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+/**
+ * Ordered list of Flash models with model-specific fast thinking configuration.
+ * - Gemini 3.8 Flash uses thinkingLevel: "LOW" (MINIMAL & thinkingBudget: 0 return HTTP 400).
+ * - Gemini 3.5 Flash-Lite / 3.6 Flash support thinkingLevel: "MINIMAL" (near-off).
+ * - Legacy Gemini 2.5 Flash uses thinkingBudget: 0 (kept only as final fallback for legacy keys).
+ */
+const MODEL_CANDIDATES = [
+  {
+    id: 'gemini-3.8-flash',
+    fastLabel: 'thinkingLevel: LOW',
+    thinkingConfig: { thinkingLevel: 'LOW' },
+    supportsTemperature: false
+  },
+  {
+    id: 'gemini-3.5-flash-lite',
+    fastLabel: 'thinkingLevel: MINIMAL',
+    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    supportsTemperature: false
+  },
+  {
+    id: 'gemini-3.6-flash',
+    fastLabel: 'thinkingLevel: MINIMAL',
+    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    supportsTemperature: false
+  },
+  {
+    id: 'gemini-2.5-flash',
+    fastLabel: 'thinkingBudget: 0',
+    thinkingConfig: { thinkingBudget: 0 },
+    supportsTemperature: true
+  }
+];
 
 /**
  * Robustly extracts JSON object from raw model text (handles markdown code fences).
@@ -34,45 +68,76 @@ function extractJsonObject(rawText) {
 }
 
 /**
- * Calls Gemini 2.5 Flash REST endpoint and handles error responses gracefully.
+ * Determines whether an API error warrants trying the next fallback model.
  */
-async function callGemini(apiKey, body, signal) {
-  const response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const msg =
-      data?.error?.message ||
-      `Gemini API Error (HTTP ${response.status})`;
-    throw new Error(msg);
-  }
-
-  const candidate = data?.candidates?.[0];
-  const parts = candidate?.content?.parts || [];
-  const text = parts
-    .map((p) => (typeof p.text === 'string' ? p.text : ''))
-    .join('\n')
-    .trim();
-
-  const groundingChunks =
-    candidate?.groundingMetadata?.groundingChunks || [];
-  const sources = groundingChunks
-    .map((chunk) => ({
-      title: chunk?.web?.title || '',
-      uri: chunk?.web?.uri || ''
-    }))
-    .filter((s) => s.uri);
-
-  return { text, sources, raw: data };
+function isModelFallbackError(status, message) {
+  if (status === 404) return true;
+  const lower = (message || '').toLowerCase();
+  return (
+    lower.includes('no longer available') ||
+    lower.includes('not found') ||
+    lower.includes('not supported') ||
+    lower.includes('deprecated')
+  );
 }
 
 /**
- * AI Auto-Fill from Product URL using gemini-2.5-flash + Google Search Grounding.
+ * Calls Gemini generateContent endpoint with automatic model fallback.
+ */
+async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
+  let lastError = null;
+
+  for (const model of MODEL_CANDIDATES) {
+    const body = buildBodyFn(model);
+    const url = `${API_BASE}/${model.id}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const msg =
+        data?.error?.message || `Gemini API Error (HTTP ${response.status})`;
+      lastError = new Error(msg);
+
+      if (isModelFallbackError(response.status, msg)) {
+        continue;
+      }
+      throw lastError;
+    }
+
+    const candidate = data?.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
+
+    // Exclude thought summary parts so only the final answer text is parsed
+    const answerParts = parts.filter((p) => !p.thought && typeof p.text === 'string');
+    const text = (answerParts.length ? answerParts : parts)
+      .map((p) => (typeof p.text === 'string' ? p.text : ''))
+      .join('\n')
+      .trim();
+
+    const groundingChunks =
+      candidate?.groundingMetadata?.groundingChunks || [];
+    const sources = groundingChunks
+      .map((chunk) => ({
+        title: chunk?.web?.title || '',
+        uri: chunk?.web?.uri || ''
+      }))
+      .filter((s) => s.uri);
+
+    return { text, sources, model, raw: data };
+  }
+
+  throw lastError || new Error('ไม่สามารถเชื่อมต่อโมเดล Gemini ได้');
+}
+
+/**
+ * AI Auto-Fill from Product URL using gemini-3.8-flash + Google Search Grounding.
  */
 export async function autoFillFromUrl(apiKey, url) {
   const prompt = `คุณคือผู้เชี่ยวชาญการตลาดอีคอมเมิร์ซและโปรดิวเซอร์โฆษณาไทย
@@ -90,16 +155,20 @@ ${url}
   "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow"
 }`;
 
-  const body = {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    tools: [{ google_search: {} }],
-    generationConfig: {
-      thinkingConfig: { thinkingBudget: 0 },
-      temperature: 0.35
+  const { text, sources, model } = await callGeminiWithFallback(apiKey, (m) => {
+    const generationConfig = {
+      thinkingConfig: m.thinkingConfig
+    };
+    if (m.supportsTemperature) {
+      generationConfig.temperature = 0.35;
     }
-  };
+    return {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      tools: [{ google_search: {} }],
+      generationConfig
+    };
+  });
 
-  const { text, sources } = await callGemini(apiKey, body);
   const parsed = extractJsonObject(text);
 
   return {
@@ -109,13 +178,14 @@ ${url}
     audience: parsed.audience || '',
     visualDetails: parsed.visualDetails || '',
     characterAnchor: parsed.characterAnchor || '',
-    sources
+    sources,
+    modelId: model.id
   };
 }
 
 /**
  * Generates the complete 0–15s Google Flow video slides, 3 Imagen prompts,
- * Thai sales captions & hashtags using gemini-2.5-flash with thinkingBudget: 0.
+ * Thai sales captions & hashtags using gemini-3.8-flash (fast low-latency mode).
  * Supports compressed Ingredient 1 & Ingredient 2 multimodal images (<=640px).
  */
 export async function generateAdStudioPlan(apiKey, input) {
@@ -211,20 +281,24 @@ Rules:
     });
   }
 
-  const body = {
-    systemInstruction: {
-      parts: [{ text: systemInstruction }]
-    },
-    contents: [{ role: 'user', parts }],
-    generationConfig: {
-      thinkingConfig: { thinkingBudget: 0 },
-      temperature: 0.72,
-      responseMimeType: 'application/json'
-    }
-  };
-
   const startedAt = performance.now();
-  const { text } = await callGemini(apiKey, body);
+  const { text, model } = await callGeminiWithFallback(apiKey, (m) => {
+    const generationConfig = {
+      thinkingConfig: m.thinkingConfig,
+      responseMimeType: 'application/json'
+    };
+    if (m.supportsTemperature) {
+      generationConfig.temperature = 0.72;
+    }
+    return {
+      systemInstruction: {
+        parts: [{ text: systemInstruction }]
+      },
+      contents: [{ role: 'user', parts }],
+      generationConfig
+    };
+  });
+
   const elapsedSec = ((performance.now() - startedAt) / 1000).toFixed(1);
   const parsed = extractJsonObject(text);
 
@@ -234,7 +308,7 @@ Rules:
 
   return {
     source: 'gemini',
-    modelLabel: `gemini-2.5-flash • thinkingBudget: 0 (${elapsedSec} วิ)`,
+    modelLabel: `${model.id} • ${model.fastLabel} (${elapsedSec} วิ)`,
     productName: input.productName,
     flowMode: mode.id,
     flowModeName: `${mode.name} (${mode.tag})`,
