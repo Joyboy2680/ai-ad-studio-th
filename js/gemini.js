@@ -1,47 +1,56 @@
 /* ==========================================================================
-   AI Ad Studio TH (Google Flow Edition) — Gemini API Client
-   - Primary Model: gemini-3.8-flash (thinkingLevel: "LOW")
-   - Auto-Fallback Chain: gemini-3.5-flash-lite -> gemini-3.6-flash -> gemini-2.5-flash
-   - AI Auto-Fill from URL with Google Search Grounding (google_search tool)
-   - Full 15s Flow & Imagen Generation with Multimodal Vision (Ingredient 1+2)
+   AI Ad Studio TH (Google Flow Edition) — Resilient Gemini API Client
+   - Multi-Model Fallback on 404 & 429 (Free Tier Quota Protection):
+     gemini-3.5-flash-lite -> gemini-3.8-flash -> gemini-3.6-flash -> gemini-3.1-flash-lite
+   - Auto-Fill Fallback Chain:
+     1) url_context + google_search
+     2) url_context only (avoids paid Search Grounding quota on Free Tier)
+     3) Multimodal Vision / URL analysis (uses Ingredient 1 image + URL slug, 0 tool quota)
    ========================================================================== */
 
 import { FLOW_MODES, CLIP_STYLES } from './presets.js';
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-/**
- * Ordered list of Flash models with model-specific fast thinking configuration.
- * - Gemini 3.8 Flash uses thinkingLevel: "LOW" (MINIMAL & thinkingBudget: 0 return HTTP 400).
- * - Gemini 3.5 Flash-Lite / 3.6 Flash support thinkingLevel: "MINIMAL" (near-off).
- * - Legacy Gemini 2.5 Flash uses thinkingBudget: 0 (kept only as final fallback for legacy keys).
- */
-const MODEL_CANDIDATES = [
+export const MODEL_CANDIDATES = [
+  {
+    id: 'gemini-3.5-flash-lite',
+    label: 'Gemini 3.5 Flash-Lite (ไว/Free Tier เยอะ)',
+    fastLabel: 'thinkingLevel: MINIMAL',
+    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    supportsTemperature: false
+  },
   {
     id: 'gemini-3.8-flash',
+    label: 'Gemini 3.8 Flash (ฉลาดสุด)',
     fastLabel: 'thinkingLevel: LOW',
     thinkingConfig: { thinkingLevel: 'LOW' },
     supportsTemperature: false
   },
   {
-    id: 'gemini-3.5-flash-lite',
-    fastLabel: 'thinkingLevel: MINIMAL',
-    thinkingConfig: { thinkingLevel: 'MINIMAL' },
-    supportsTemperature: false
-  },
-  {
     id: 'gemini-3.6-flash',
+    label: 'Gemini 3.6 Flash',
     fastLabel: 'thinkingLevel: MINIMAL',
     thinkingConfig: { thinkingLevel: 'MINIMAL' },
     supportsTemperature: false
   },
   {
-    id: 'gemini-2.5-flash',
-    fastLabel: 'thinkingBudget: 0',
-    thinkingConfig: { thinkingBudget: 0 },
-    supportsTemperature: true
+    id: 'gemini-3.1-flash-lite',
+    label: 'Gemini 3.1 Flash-Lite',
+    fastLabel: 'thinkingLevel: MINIMAL',
+    thinkingConfig: { thinkingLevel: 'MINIMAL' },
+    supportsTemperature: false
   }
 ];
+
+function getOrderedModels(preferredModelId) {
+  if (!preferredModelId || preferredModelId === 'auto') {
+    return MODEL_CANDIDATES;
+  }
+  const primary = MODEL_CANDIDATES.find((m) => m.id === preferredModelId);
+  if (!primary) return MODEL_CANDIDATES;
+  return [primary, ...MODEL_CANDIDATES.filter((m) => m.id !== preferredModelId)];
+}
 
 /**
  * Robustly extracts JSON object from raw model text (handles markdown code fences).
@@ -69,25 +78,47 @@ function extractJsonObject(rawText) {
 
 /**
  * Determines whether an API error warrants trying the next fallback model.
+ * Includes 404 (unavailable/retired) AND 429 (Free Tier quota exceeded on one model bucket).
  */
-function isModelFallbackError(status, message) {
-  if (status === 404) return true;
+function shouldTryNextModel(status, message) {
+  if (status === 404 || status === 429 || status === 503) return true;
   const lower = (message || '').toLowerCase();
   return (
     lower.includes('no longer available') ||
     lower.includes('not found') ||
     lower.includes('not supported') ||
-    lower.includes('deprecated')
+    lower.includes('deprecated') ||
+    lower.includes('quota') ||
+    lower.includes('rate limit') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('overloaded')
   );
 }
 
 /**
- * Calls Gemini generateContent endpoint with automatic model fallback.
+ * Formats user-friendly Thai error hints when all models fail (especially HTTP 429).
  */
-async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
-  let lastError = null;
+function formatFriendlyError(error, status) {
+  const msg = error?.message || '';
+  const lower = msg.toLowerCase();
+  if (status === 429 || lower.includes('quota') || lower.includes('resource_exhausted')) {
+    return 'API Key นี้โควตา Free Tier เต็มหรือถูกจำกัด (HTTP 429) ทุกโมเดลแล้ว — กรุณาเช็กโควตาที่ ai.dev/rate-limit, ผูก Billing หรือสร้าง Key ใหม่ (หรือลบ API Key ออกชั่วคราวเพื่อใช้โหมด Demo ได้ทันที)';
+  }
+  if (status === 401 || status === 403 || lower.includes('api key not valid')) {
+    return 'Gemini API Key ไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบ Key จาก aistudio.google.com/apikey';
+  }
+  return msg || 'ไม่สามารถเชื่อมต่อ Gemini API ได้';
+}
 
-  for (const model of MODEL_CANDIDATES) {
+/**
+ * Calls Gemini generateContent endpoint with automatic model fallback on 404/429/503.
+ */
+async function callGeminiWithFallback(apiKey, buildBodyFn, preferredModelId = 'auto', signal) {
+  const models = getOrderedModels(preferredModelId);
+  let lastError = null;
+  let lastStatus = 0;
+
+  for (const model of models) {
     const body = buildBodyFn(model);
     const url = `${API_BASE}/${model.id}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
@@ -103,9 +134,11 @@ async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
     if (!response.ok) {
       const msg =
         data?.error?.message || `Gemini API Error (HTTP ${response.status})`;
+      lastStatus = response.status;
       lastError = new Error(msg);
+      lastError.status = response.status;
 
-      if (isModelFallbackError(response.status, msg)) {
+      if (shouldTryNextModel(response.status, msg)) {
         continue;
       }
       throw lastError;
@@ -132,12 +165,14 @@ async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
         uri: chunk?.web?.uri || ''
       })),
       ...urlMeta.map((u) => ({
-        title: u?.urlRetrievalStatus === 'URL_RETRIEVAL_STATUS_SUCCESS' ? 'URL Context' : 'URL Checked',
+        title:
+          u?.urlRetrievalStatus === 'URL_RETRIEVAL_STATUS_SUCCESS'
+            ? 'URL Context'
+            : 'URL Checked',
         uri: u?.retrievedUrl || ''
       }))
     ].filter((s) => s.uri);
 
-    // Deduplicate sources by URI
     const uniqueSources = [];
     const seen = new Set();
     for (const s of sources) {
@@ -150,22 +185,25 @@ async function callGeminiWithFallback(apiKey, buildBodyFn, signal) {
     return { text, sources: uniqueSources, model, raw: data };
   }
 
-  throw lastError || new Error('ไม่สามารถเชื่อมต่อโมเดล Gemini ได้');
+  const wrapped = new Error(formatFriendlyError(lastError, lastStatus));
+  wrapped.status = lastStatus;
+  wrapped.rawMessage = lastError?.message || '';
+  throw wrapped;
 }
 
 /**
- * AI Auto-Fill from Product URL using gemini-3.8-flash + URL Context + Google Search Grounding.
- * Handles direct URLs as well as e-commerce short links (s.shopee.co.th, vt.tiktok.com, s.lazada.co.th).
+ * AI Auto-Fill from Product URL (and optional Ingredient 1 image).
+ * Uses progressive tool fallback so Free Tier keys without Search Grounding quota still succeed!
  */
-export async function autoFillFromUrl(apiKey, url) {
-  const prompt = `คุณคือผู้เชี่ยวชาญการตลาดอีคอมเมิร์ซและโปรดิวเซอร์โฆษณาไทย
-เป้าหมาย: ดึงข้อมูลสินค้าจริงจากลิงก์นี้เพื่อนำไปทำคลิปขายของ 15 วิ และภาพนิ่ง Imagen
-ลิงก์สินค้า: ${url}
+export async function autoFillFromUrl(apiKey, url, options = {}) {
+  const { preferredModel = 'auto', ingredient1 = null } = options;
+  const hasImage = Boolean(ingredient1?.base64);
 
-ขั้นตอนการทำงาน:
-1. ใช้ url_context เปิดและติดตามลิงก์ปลายทาง (รวมถึงลิงก์ย่ออย่าง s.shopee.co.th, s.lazada.co.th, vt.tiktok.com)
-2. หากหน้าเว็บมีระบบล็อกอินหรืออ่านได้บางส่วน ให้ดึงชื่อสินค้า, slug ใน URL, shop_id และ item_id จากลิงก์ปลายทาง แล้วใช้ google_search ค้นหาเพิ่มเติม (เช่น site:shopee.co.th <item_id> หรือ <shop_id>) เพื่อให้ได้ข้อมูลสินค้าและร้านค้าจริงมากที่สุด
-3. ห้ามเดาสินค้ามั่วที่ไม่เกี่ยวข้อง หากพบเพียงข้อมูลร้านค้า/หมวดสินค้า (เช่น รู้ร้านแต่ไม่เจอรหัสสินค้าย่อย) ให้ระบุในฟิลด์ "note" ให้ชัดเจน
+  const buildPrompt = (modeHint) => `คุณคือผู้เชี่ยวชาญการตลาดอีคอมเมิร์ซและโปรดิวเซอร์โฆษณาไทย
+เป้าหมาย: ดึงข้อมูลสินค้าจริงเพื่อนำไปทำคลิปขายของ 15 วิ และภาพนิ่ง Imagen
+${url ? `ลิงก์สินค้า: ${url}` : 'ไม่ได้วางลิงก์ (ให้วิเคราะห์จากรูปสินค้าที่แนบเป็นหลัก)'}
+${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้วย ให้ใช้รายละเอียดจากภาพสินค้าเป็นข้อมูลยืนยันหลัก' : ''}
+โหมดการค้นหา: ${modeHint}
 
 ตอบกลับเป็น JSON object เท่านั้น (ห้ามใส่คำอธิบายอื่นนอก JSON) ตามโครงสร้างนี้:
 {
@@ -175,58 +213,108 @@ export async function autoFillFromUrl(apiKey, url) {
   "audience": "กลุ่มเป้าหมายหลักในไทย",
   "visualDetails": "รายละเอียดลักษณะสินค้า สี บรรจุภัณฑ์ และพร็อพที่เหมาะถ่ายทำ (ภาษาไทยหรืออังกฤษ)",
   "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow",
-  "note": "หมายเหตุสั้นๆ หากเป็นลิงก์ย่อที่ติดหน้าล็อกอินของแพลตฟอร์ม หรือเว้นว่างไว้ถ้าดึงข้อมูลได้ครบ"
+  "note": "หมายเหตุสั้นๆ หากเป็นลิงก์ย่อที่ติดหน้าล็อกอินหรือไม่ได้ใช้ Search Grounding"
 }`;
 
-  const buildRequest = (useUrlContext) => (m) => {
-    const generationConfig = {
-      thinkingConfig: m.thinkingConfig
-    };
-    if (m.supportsTemperature) {
-      generationConfig.temperature = 0.35;
+  const makeParts = (modeHint) => {
+    const parts = [{ text: buildPrompt(modeHint) }];
+    if (hasImage) {
+      parts.push({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: ingredient1.base64
+        }
+      });
     }
-    const tools = useUrlContext
-      ? [{ url_context: {} }, { google_search: {} }]
-      : [{ google_search: {} }];
-    return {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      tools,
-      generationConfig
-    };
+    return parts;
   };
 
-  let result;
-  try {
-    result = await callGeminiWithFallback(apiKey, buildRequest(true));
-  } catch (err) {
-    // Graceful fallback if url_context tool is unavailable on a specific key/model
-    const msg = (err?.message || '').toLowerCase();
-    if (msg.includes('url_context') || msg.includes('tool') || msg.includes('400')) {
-      result = await callGeminiWithFallback(apiKey, buildRequest(false));
-    } else {
-      throw err;
+  // Tool strategies from richest -> most Free-Tier-friendly
+  const toolStrategies = url
+    ? [
+        {
+          name: 'URL Context + Google Search',
+          tools: [{ url_context: {} }, { google_search: {} }],
+          hint: 'ใช้ url_context ติดตามลิงก์ปลายทางและใช้ google_search ค้นหาข้อมูลสินค้าจริง'
+        },
+        {
+          name: 'URL Context (Free-Tier Friendly)',
+          tools: [{ url_context: {} }],
+          hint: 'ใช้ url_context อ่านหน้าเว็บจากลิงก์ที่ให้มาโดยตรง'
+        },
+        {
+          name: hasImage ? 'AI Vision + URL Analysis' : 'URL Analysis (No Grounding Quota)',
+          tools: null,
+          hint: hasImage
+            ? 'วิเคราะห์สินค้าจากภาพ Ingredient 1 ที่แนบและชื่อในลิงก์ (โควตา Search Grounding ไม่พอ)'
+            : 'วิเคราะห์ข้อมูลเบื้องต้นจากชื่อ/slug ในลิงก์ (หากเป็นลิงก์ย่อให้แจ้งผู้ใช้ว่าควรแนบรูป Ingredient 1 หรือวาง URL เต็ม)'
+        }
+      ]
+    : [
+        {
+          name: 'AI Vision Auto-Fill',
+          tools: null,
+          hint: 'วิเคราะห์ชื่อสินค้า จุดเด่น กลุ่มเป้าหมาย และพร็อพถ่ายทำจากภาพ Ingredient 1 ที่แนบ'
+        }
+      ];
+
+  let lastErr = null;
+  for (const strategy of toolStrategies) {
+    try {
+      const result = await callGeminiWithFallback(
+        apiKey,
+        (m) => {
+          const generationConfig = {
+            thinkingConfig: m.thinkingConfig
+          };
+          if (!strategy.tools) {
+            generationConfig.responseMimeType = 'application/json';
+          }
+          if (m.supportsTemperature) {
+            generationConfig.temperature = 0.35;
+          }
+          const reqBody = {
+            contents: [{ role: 'user', parts: makeParts(strategy.hint) }],
+            generationConfig
+          };
+          if (strategy.tools) {
+            reqBody.tools = strategy.tools;
+          }
+          return reqBody;
+        },
+        preferredModel
+      );
+
+      const parsed = extractJsonObject(result.text);
+      return {
+        productName: parsed.productName || '',
+        benefits: parsed.benefits || '',
+        pricePromo: parsed.pricePromo || '',
+        audience: parsed.audience || '',
+        visualDetails: parsed.visualDetails || '',
+        characterAnchor: parsed.characterAnchor || '',
+        note: parsed.note || '',
+        sources: result.sources,
+        modelId: result.model.id,
+        strategyName: strategy.name
+      };
+    } catch (err) {
+      lastErr = err;
+      // If API key itself is invalid (401/403), stop immediately
+      if (err.status === 401 || err.status === 403) {
+        throw err;
+      }
+      // Otherwise try the next lighter tool strategy (e.g., drop google_search on 429/400)
+      continue;
     }
   }
 
-  const parsed = extractJsonObject(result.text);
-
-  return {
-    productName: parsed.productName || '',
-    benefits: parsed.benefits || '',
-    pricePromo: parsed.pricePromo || '',
-    audience: parsed.audience || '',
-    visualDetails: parsed.visualDetails || '',
-    characterAnchor: parsed.characterAnchor || '',
-    note: parsed.note || '',
-    sources: result.sources,
-    modelId: result.model.id
-  };
+  throw lastErr || new Error('Auto-Fill ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
 }
 
 /**
  * Generates the complete 0–15s Google Flow video slides, 3 Imagen prompts,
- * Thai sales captions & hashtags using gemini-3.8-flash (fast low-latency mode).
- * Supports compressed Ingredient 1 & Ingredient 2 multimodal images (<=640px).
+ * Thai sales captions & hashtags with automatic model fallback on 404/429.
  */
 export async function generateAdStudioPlan(apiKey, input) {
   const mode = FLOW_MODES[input.flowMode] || FLOW_MODES.veo3;
@@ -322,22 +410,26 @@ Rules:
   }
 
   const startedAt = performance.now();
-  const { text, model } = await callGeminiWithFallback(apiKey, (m) => {
-    const generationConfig = {
-      thinkingConfig: m.thinkingConfig,
-      responseMimeType: 'application/json'
-    };
-    if (m.supportsTemperature) {
-      generationConfig.temperature = 0.72;
-    }
-    return {
-      systemInstruction: {
-        parts: [{ text: systemInstruction }]
-      },
-      contents: [{ role: 'user', parts }],
-      generationConfig
-    };
-  });
+  const { text, model } = await callGeminiWithFallback(
+    apiKey,
+    (m) => {
+      const generationConfig = {
+        thinkingConfig: m.thinkingConfig,
+        responseMimeType: 'application/json'
+      };
+      if (m.supportsTemperature) {
+        generationConfig.temperature = 0.72;
+      }
+      return {
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents: [{ role: 'user', parts }],
+        generationConfig
+      };
+    },
+    input.preferredModel || 'auto'
+  );
 
   const elapsedSec = ((performance.now() - startedAt) / 1000).toFixed(1);
   const parsed = extractJsonObject(text);

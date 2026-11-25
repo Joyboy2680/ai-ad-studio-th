@@ -24,6 +24,7 @@ const PROGRESS_STAGES = [
 // Application State
 const state = {
   apiKey: '',
+  preferredModel: 'auto',
   flowMode: 'veo3',
   clipStyle: 'fast-hands-on',
   lockCharacter: true,
@@ -43,6 +44,7 @@ function cacheDom() {
     'apiKeyInput',
     'toggleApiKeyBtn',
     'apiStatusDot',
+    'modelSelect',
     'productUrlInput',
     'autoFillBtn',
     'groundingSources',
@@ -362,8 +364,9 @@ function loadSampleProduct(sampleKey, silent = false) {
 
 async function handleAutoFill() {
   const url = el.productUrlInput.value.trim();
-  if (!url) {
-    showToast('กรุณาวางลิงก์สินค้าก่อนกด AI Auto-Fill', 'warn');
+  const hasIng1 = Boolean(state.ingredient1?.base64);
+  if (!url && !hasIng1) {
+    showToast('กรุณาวางลิงก์สินค้า หรืออัปโหลดรูป Ingredient 1 ก่อนกด AI Auto-Fill', 'warn');
     el.productUrlInput.focus();
     return;
   }
@@ -371,23 +374,25 @@ async function handleAutoFill() {
   const apiKey = state.apiKey.trim();
   if (!apiKey) {
     // Helpful smart fallback for users testing without an API key
-    try {
-      const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
-      const slug = decodeURIComponent(parsedUrl.pathname)
-        .replace(/[-_/]+/g, ' ')
-        .trim();
-      if (slug && slug.length > 3) {
-        el.productNameInput.value = slug
-          .split(' ')
-          .slice(0, 6)
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
+    if (url) {
+      try {
+        const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
+        const slug = decodeURIComponent(parsedUrl.pathname)
+          .replace(/[-_/]+/g, ' ')
+          .trim();
+        if (slug && slug.length > 3) {
+          el.productNameInput.value = slug
+            .split(' ')
+            .slice(0, 6)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+        }
+      } catch {
+        // ignore URL parse error
       }
-    } catch {
-      // ignore URL parse error
     }
     showToast(
-      'ใส่ Gemini API Key ด้านบนเพื่อเปิดใช้งาน AI Auto-Fill + Google Search Grounding แบบเรียลไทม์ (หรือกดเลือกสินค้าตัวอย่างด้านล่าง)',
+      'ใส่ Gemini API Key ด้านบนเพื่อเปิดใช้งาน AI Auto-Fill (หรือกดเลือกสินค้าตัวอย่างด้านล่าง)',
       'warn'
     );
     el.apiKeyInput.focus();
@@ -401,7 +406,10 @@ async function handleAutoFill() {
   el.groundingSources.innerHTML = '';
 
   try {
-    const result = await autoFillFromUrl(apiKey, url);
+    const result = await autoFillFromUrl(apiKey, url, {
+      preferredModel: state.preferredModel,
+      ingredient1: state.ingredient1
+    });
     if (result.productName) el.productNameInput.value = result.productName;
     if (result.benefits) el.productBenefitsInput.value = result.benefits;
     if (result.pricePromo) el.productPromoInput.value = result.pricePromo;
@@ -413,25 +421,27 @@ async function handleAutoFill() {
       ? `<span class="sample-label" style="color:#fde047;">หมายเหตุ: ${escapeHtml(result.note)}</span>`
       : '';
 
-    if (result.sources?.length || noteBadge) {
-      el.groundingSources.innerHTML =
-        (result.sources?.length
-          ? '<span class="sample-label">Sources:</span>' +
-            result.sources
-              .slice(0, 3)
-              .map(
-                (s) =>
-                  `<a class="grounding-chip" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.uri)}</a>`
-              )
-              .join('')
-          : '') + noteBadge;
-    }
+    const modeBadge = `<span class="grounding-chip">${escapeHtml(result.modelId)} • ${escapeHtml(result.strategyName || 'Auto-Fill')}</span>`;
+
+    el.groundingSources.innerHTML =
+      modeBadge +
+      (result.sources?.length
+        ? result.sources
+            .slice(0, 3)
+            .map(
+              (s) =>
+                `<a class="grounding-chip" href="${escapeHtml(s.uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title || s.uri)}</a>`
+            )
+            .join('')
+        : '') +
+      noteBadge;
 
     showToast(
-      `AI Auto-Fill สำเร็จด้วย ${result.modelId} + URL Context & Search Grounding!`,
+      `AI Auto-Fill สำเร็จด้วย ${result.modelId} (${result.strategyName})!`,
       'success'
     );
   } catch (err) {
+    el.groundingSources.innerHTML = `<span class="sample-label" style="color:#fca5a5;">⚠️ ${escapeHtml(err.message)}</span>`;
     showToast(`Auto-Fill ไม่สำเร็จ: ${err.message}`, 'error');
   } finally {
     el.autoFillBtn.disabled = false;
@@ -464,7 +474,8 @@ function collectInputPayload() {
     lockCharacter: state.lockCharacter,
     characterAnchor: el.characterAnchorInput.value.trim(),
     ingredient1: state.ingredient1,
-    ingredient2: state.ingredient2
+    ingredient2: state.ingredient2,
+    preferredModel: state.preferredModel
   };
 }
 
@@ -536,8 +547,21 @@ async function handleGenerate() {
     );
   } catch (err) {
     clearInterval(tickInterval);
-    el.progressStage.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
-    showToast(`สร้างพรอมไม่สำเร็จ: ${err.message}`, 'error');
+    if (err?.status === 429) {
+      const fallbackPlan = buildLocalStudioPlan(payload);
+      fallbackPlan.modelLabel = 'Smart Fallback (API Key ติดโควตา 429)';
+      state.plan = fallbackPlan;
+      state.currentSlide = 0;
+      renderAllOutputs();
+      el.progressFill.style.width = '100%';
+      el.progressTimer.textContent = '15.0s / 15.0s (Fallback)';
+      el.progressStage.textContent =
+        'API Key ติดโควตา 429 ทุกโมเดล — ระบบสลับสร้างพรอมด้วย Smart Fallback ให้ใช้งานต่อได้ทันที';
+      showToast(err.message, 'warn');
+    } else {
+      el.progressStage.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+      showToast(`สร้างพรอมไม่สำเร็จ: ${err.message}`, 'error');
+    }
   } finally {
     state.isGenerating = false;
     el.generateBtn.disabled = false;
@@ -1076,6 +1100,16 @@ function initApiKey() {
   state.apiKey = saved;
   el.apiKeyInput.value = saved;
   updateApiStatusDot();
+
+  const savedModel = localStorage.getItem('ai_ad_studio_th_gemini_model') || 'auto';
+  state.preferredModel = savedModel;
+  if (el.modelSelect) {
+    el.modelSelect.value = savedModel;
+    el.modelSelect.addEventListener('change', () => {
+      state.preferredModel = el.modelSelect.value;
+      localStorage.setItem('ai_ad_studio_th_gemini_model', state.preferredModel);
+    });
+  }
 
   el.apiKeyInput.addEventListener('input', () => {
     state.apiKey = el.apiKeyInput.value.trim();
