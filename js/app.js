@@ -30,11 +30,11 @@ const STORAGE_API_KEY = 'ai_ad_studio_th_gemini_api_key';
 const MAX_IMAGE_DIM = 640;
 
 const PROGRESS_STAGES = [
-  { maxSec: 3, label: '0–3 วิ • วิเคราะห์สินค้า & องค์ประกอบ Ingredient 1+2...' },
-  { maxSec: 6, label: '3–6 วิ • ล็อกตัวละคร & ตั้งค่าโหมด Google Flow...' },
-  { maxSec: 10, label: '6–10 วิ • เขียนสคริปต์ & พรอมคลิป 0–15 วิ (Fast Mode)...' },
-  { maxSec: 13, label: '10–13 วิ • สร้างพรอมภาพนิ่ง Imagen 3 ช็อตหลัก...' },
-  { maxSec: 15, label: '13–15 วิ • เรียบเรียงแคปชั่น แฮชแท็ก & ตรวจสอบความต่อเนื่อง...' }
+  { maxSec: 2, label: '0–2 วิ • วิเคราะห์สินค้า & องค์ประกอบ Ingredient 1+2...' },
+  { maxSec: 4, label: '2–4 วิ • ล็อกตัวละคร/มือ & ตั้งค่าโหมด Google Flow...' },
+  { maxSec: 7, label: '4–7 วิ • เขียนสคริปต์ & พรอมคลิป 0–10 วิ (Fast Mode)...' },
+  { maxSec: 9, label: '7–9 วิ • สร้างพรอมภาพนิ่ง Imagen 3 ช็อตหลัก...' },
+  { maxSec: 10, label: '9–10 วิ • เรียบเรียงแคปชั่น แฮชแท็ก & ตรวจสอบความต่อเนื่อง...' }
 ];
 
 // Application State
@@ -372,6 +372,7 @@ function renderClipStyles() {
           <div class="style-option-title">
             <span>${escapeHtml(style.name)}</span>
             ${style.isDefault ? '<span class="default-star">ค่าเริ่มต้น</span>' : ''}
+            ${style.isNew ? '<span class="default-star new-badge">ไม่เห็นหน้า • ใหม่</span>' : ''}
           </div>
           <div class="style-option-sub">${escapeHtml(style.shortDesc)}</div>
         </div>
@@ -538,31 +539,31 @@ async function handleGenerate() {
 
   state.isGenerating = true;
   el.generateBtn.disabled = true;
-  el.generateBtnText.textContent = 'กำลังประมวลผลด้วย Gemini 3.8 Flash...';
+  el.generateBtnText.textContent = 'กำลังประมวลผลด้วย Gemini Flash...';
   el.progressPanel.classList.add('visible');
 
-  const TOTAL_SECONDS = 15;
+  const TOTAL_SECONDS = 10;
   let displaySec = 0;
   el.progressFill.style.width = '0%';
-  el.progressTimer.textContent = '0.0s / 15.0s';
+  el.progressTimer.textContent = '0.0s / 10.0s';
   el.progressStage.textContent = getStageText(0);
 
   const startedAt = performance.now();
   const hasApiKey = Boolean(state.apiKey.trim());
 
-  // Tick progress bar along the 15-second studio scale
+  // Tick progress bar along the 10-second studio scale
   const tickInterval = setInterval(() => {
     const elapsed = (performance.now() - startedAt) / 1000;
     if (hasApiKey) {
-      // Smoothly pace up to 14.2s while waiting for live Gemini API
-      displaySec = Math.min(14.2, elapsed * 1.15);
+      // Smoothly pace up to 9.5s while waiting for live Gemini API
+      displaySec = Math.min(9.5, elapsed * 1.15);
     } else {
-      // In Demo Mode, map 2.2s smooth animation across 0 -> 14.5s
-      displaySec = Math.min(14.5, (elapsed / 2.2) * 14.5);
+      // In Demo Mode, map 1.8s smooth animation across 0 -> 9.7s
+      displaySec = Math.min(9.7, (elapsed / 1.8) * 9.7);
     }
     const pct = Math.min(96, (displaySec / TOTAL_SECONDS) * 100);
     el.progressFill.style.width = `${pct.toFixed(1)}%`;
-    el.progressTimer.textContent = `${displaySec.toFixed(1)}s / 15.0s`;
+    el.progressTimer.textContent = `${displaySec.toFixed(1)}s / 10.0s`;
     el.progressStage.textContent = getStageText(displaySec);
   }, 80);
 
@@ -571,13 +572,13 @@ async function handleGenerate() {
     if (hasApiKey) {
       plan = await generateAdStudioPlan(state.apiKey.trim(), payload);
     } else {
-      await new Promise((r) => setTimeout(r, 2250));
+      await new Promise((r) => setTimeout(r, 1850));
       plan = buildLocalStudioPlan(payload);
     }
 
     clearInterval(tickInterval);
     el.progressFill.style.width = '100%';
-    el.progressTimer.textContent = '15.0s / 15.0s ✓';
+    el.progressTimer.textContent = '10.0s / 10.0s ✓';
     el.progressStage.textContent = hasApiKey
       ? `สร้างพรอมสำเร็จด้วย ${plan.modelLabel}`
       : 'สร้างพรอมโหมด Demo สำเร็จ! (ใส่ Gemini API Key เพื่อใช้ AI จริง)';
@@ -588,8 +589,8 @@ async function handleGenerate() {
 
     showToast(
       hasApiKey
-        ? 'สร้างชุดพรอม Google Flow & Imagen 15 วิ เรียบร้อยแล้ว!'
-        : 'สร้างพรอมโหมด Demo เรียบร้อยแล้ว! พร้อมใช้งานทุกแท็บ',
+        ? 'สร้างชุดพรอม Google Flow & Imagen 10 วิ เรียบร้อยแล้ว!'
+        : 'สร้างพรอมโหมด Demo (10 วิ) เรียบร้อยแล้ว! พร้อมใช้งานทุกแท็บ',
       'success'
     );
   } catch (err) {
@@ -601,7 +602,7 @@ async function handleGenerate() {
       state.currentSlide = 0;
       renderAllOutputs();
       el.progressFill.style.width = '100%';
-      el.progressTimer.textContent = '15.0s / 15.0s (Fallback)';
+      el.progressTimer.textContent = '10.0s / 10.0s (Fallback)';
       el.progressStage.textContent =
         'API Key ติดโควตา 429 ทุกโมเดล — ระบบสลับสร้างพรอมด้วย Smart Fallback ให้ใช้งานต่อได้ทันที';
       showToast(err.message, 'warn');
@@ -612,7 +613,7 @@ async function handleGenerate() {
   } finally {
     state.isGenerating = false;
     el.generateBtn.disabled = false;
-    el.generateBtnText.textContent = 'สร้างพรอม Google Flow & Imagen (15 วิ)';
+    el.generateBtnText.textContent = 'สร้างพรอม Google Flow & Imagen (10 วิ)';
   }
 }
 
@@ -972,18 +973,18 @@ function buildMasterCopyText() {
 
   const lines = [
     '================================================================',
-    'AI AD STUDIO TH — GOOGLE FLOW EDITION (0–15s PRODUCTION PACKAGE)',
+    'AI AD STUDIO TH — GOOGLE FLOW EDITION (0–10s PRODUCTION PACKAGE)',
     '================================================================',
     `สินค้า: ${p.productName}`,
     `โหมด Google Flow: ${p.flowModeName}`,
-    `แนวทางคลิป 15 วิ: ${p.clipStyleName}`,
+    `แนวทางคลิป 10 วิ: ${p.clipStyleName}`,
     `อัตราส่วนภาพ: ${p.aspectRatio}`,
     `ล็อกตัวละครทุกช็อต: ${p.lockCharacter ? 'ON' : 'OFF'}`,
-    p.characterAnchor ? `Character Anchor: ${p.characterAnchor}` : '',
+    p.characterAnchor ? `Character/Hands Anchor: ${p.characterAnchor}` : '',
     `หมายเหตุโหมดเสียง/ซีน: ${p.audioModeNote}`,
     '',
     '----------------------------------------------------------------',
-    '1. สไลด์คลิป 0–15 วินาที (GOOGLE FLOW PROMPTS & SCRIPT)',
+    '1. สไลด์คลิป 0–10 วินาที (GOOGLE FLOW PROMPTS & SCRIPT)',
     '----------------------------------------------------------------'
   ];
 
@@ -1538,7 +1539,7 @@ function init() {
       .replace(/[^a-zA-Z0-9ก-๙_-]+/g, '-')
       .slice(0, 40);
     a.href = url;
-    a.download = `${safeName}-google-flow-15s.txt`;
+    a.download = `${safeName}-google-flow-10s.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();

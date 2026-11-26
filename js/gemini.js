@@ -329,13 +329,14 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
 }
 
 /**
- * Generates the complete 0–15s Google Flow video slides, 3 Imagen prompts,
+ * Generates the complete 0–10s Google Flow video slides, 3 Imagen prompts,
  * Thai sales captions & hashtags with automatic model fallback on 404/429.
  */
 export async function generateAdStudioPlan(apiKey, input) {
   const mode = FLOW_MODES[input.flowMode] || FLOW_MODES.veo3;
   const style =
     CLIP_STYLES.find((s) => s.id === input.clipStyle) || CLIP_STYLES[0];
+  const isFaceless = style.id === 'faceless-hands-only';
 
   const hasIng1 = Boolean(input.ingredient1?.base64);
   const hasIng2 = Boolean(input.ingredient2?.base64);
@@ -343,18 +344,22 @@ export async function generateAdStudioPlan(apiKey, input) {
   const systemInstruction = `You are "AI Ad Studio TH (Google Flow Edition)", an elite Thai e-commerce ad director and Google Flow (Veo 3 / Veo 2 / Scenebuilder) + Imagen prompt architect.
 Rules:
 1. All Google Flow video prompts and Imagen still-image prompts MUST be written in ultra-clear, film-grade English optimized for Google Flow & Imagen 3/4.
-2. All Thai voiceovers, on-screen text overlays, continuity tips, captions, and hashtags MUST be natural, persuasive, high-converting modern Thai (ภาษาไทยธรรมชาติ ปิดการขายเก่ง ไม่แข็ง).
-3. Produce EXACTLY 4 video slides totaling 15 seconds:
-   - Slide 1: "00:00 - 00:03" (shortTime: "0–3s")
-   - Slide 2: "00:03 - 00:07" (shortTime: "3–7s")
-   - Slide 3: "00:07 - 00:11" (shortTime: "7–11s")
-   - Slide 4: "00:11 - 00:15" (shortTime: "11–15s")
+2. All Thai voiceovers, on-screen text overlays, continuity tips, captions, and hashtags MUST be natural, persuasive, high-converting modern Thai (ภาษาไทยธรรมชาติ ปิดการขายเก่ง ไม่แข็ง, กระชับพอดี 10 วินาที).
+3. Produce EXACTLY 4 video slides totaling 10 seconds:
+   - Slide 1: "00:00 - 00:02" (shortTime: "0–2s")
+   - Slide 2: "00:02 - 00:05" (shortTime: "2–5s")
+   - Slide 3: "00:05 - 00:08" (shortTime: "5–8s")
+   - Slide 4: "00:08 - 00:10" (shortTime: "8–10s")
 4. Produce EXACTLY 3 Imagen still-image prompts (Hero Thumbnail, Lifestyle Hands-On, Studio Flat-Lay).
 5. Produce EXACTLY 3 Thai platform captions (TikTok/Reels, Facebook/IG, Shopee Video/Line OA) and 10-14 high-reach hashtags.
-6. If Character Lock is ON, embed an identical visual subject/character & product consistency anchor across ALL 4 video prompts so Google Flow preserves the exact same presenter, clothing, lighting, and product in every cut.
-7. If Ingredient images are attached, accurately reflect the real product packaging, colors, materials, and presenter appearance seen in the uploaded images, and reference @Ingredient1 / @Ingredient2 naturally for Google Flow Ingredients-to-Video.`;
+6. If Character Lock is ON, embed an identical visual subject/character & product consistency anchor across ALL 4 video prompts so Google Flow preserves the exact same presenter/hands, clothing, lighting, and product in every cut.
+7. If Ingredient images are attached, accurately reflect the real product packaging, colors, materials, and presenter appearance seen in the uploaded images, and reference @Ingredient1 / @Ingredient2 naturally for Google Flow Ingredients-to-Video.${
+    isFaceless
+      ? '\n8. STRICT FACELESS HANDS-ONLY MODE: Do NOT include any faces, heads, portraits, or full-body people in ANY of the 4 video prompts or Imagen Shot 2. Show ONLY close-up hands, fingers, and wrists picking up, testing, demonstrating, and holding the product from POV / 45-degree tabletop angles.'
+      : ''
+  }`;
 
-  const userPrompt = `สร้างชุดพรอมโฆษณาครบวงจรจากข้อมูลสินค้านี้:
+  const userPrompt = `สร้างชุดพรอมโฆษณาครบวงจรความยาว 10 วินาทีจากข้อมูลสินค้านี้:
 - ชื่อสินค้า: ${input.productName}
 - จุดเด่น/สรรพคุณ: ${input.benefits}
 - ราคา/โปรโมชัน/CTA: ${input.pricePromo}
@@ -362,25 +367,29 @@ Rules:
 - รายละเอียดภาพ/บรรจุภัณฑ์: ${input.visualDetails || 'ตามภาพ Ingredient ที่แนบหรือดีไซน์พรีเมียมทันสมัย'}
 - อัตราส่วนภาพ (Aspect Ratio): ${input.aspectRatio || '9:16'}
 - โหมด Google Flow: ${mode.name} (${mode.tag}) — ${mode.promptDirective}
-- แนวทางคลิป 15 วิ: ${style.name} — ${style.englishVibe}
-- ล็อกตัวละครทุกช็อต (Character Lock): ${input.lockCharacter ? 'ON (บังคับล็อกตัวละครและสินค้าเหมือนกันเป๊ะทั้ง 4 ช็อต)' : 'OFF'}
-- รายละเอียดตัวละครหลัก (Character Anchor): ${input.characterAnchor || 'Auto-design natural Thai presenter matching the product / Ingredient 2'}
+- แนวทางคลิป 10 วิ: ${style.name} — ${style.englishVibe}
+${isFaceless ? '- กฎพิเศษ (Faceless Hands-Only): ห้ามเห็นหน้าคน/หัว/เต็มตัวเด็ดขาด ให้เห็นแค่มือจับ โชว์ เปิดใช้ ทดสอบ และชี้สินค้าเท่านั้น\n' : ''}- ล็อกตัวละครทุกช็อต (Character Lock): ${input.lockCharacter ? 'ON (บังคับล็อกตัวละคร/มือและสินค้าเหมือนกันเป๊ะทั้ง 4 ช็อต)' : 'OFF'}
+- รายละเอียดตัวละคร/มือหลัก (Anchor): ${
+    isFaceless
+      ? 'Close-up natural Thai hands only (no face visible), consistent wrist/sleeve and tabletop lighting'
+      : input.characterAnchor || 'Auto-design natural Thai presenter matching the product / Ingredient 2'
+  }
 - ไฟล์แนบ: Ingredient 1 (สินค้า) = ${hasIng1 ? 'แนบรูปแล้ว (ดูจากรูปที่ 1)' : 'ไม่ได้แนบ'}, Ingredient 2 (พรีเซนเตอร์/ฉาก) = ${hasIng2 ? 'แนบรูปแล้ว (ดูจากรูปที่ 2)' : 'ไม่ได้แนบ'}
 
 ตอบกลับเป็น JSON ที่มีโครงสร้างดังนี้เท่านั้น:
 {
-  "characterAnchor": "English visual anchor summarizing locked presenter + product + lighting",
+  "characterAnchor": "English visual anchor summarizing locked presenter/hands + product + lighting",
   "audioModeNote": "คำแนะนำการตั้งค่าเสียง/ซีนสำหรับโหมด Google Flow ที่เลือก (ภาษาไทย)",
   "slides": [
     {
       "index": 1,
-      "timecode": "00:00 - 00:03",
-      "shortTime": "0–3s",
+      "timecode": "00:00 - 00:02",
+      "shortTime": "0–2s",
       "role": "HOOK / หยุดนิ้ว",
       "title": "ชื่อช็อตภาษาไทยกระชับ",
       "flowAction": "คำสั่งโหมด Google Flow เช่น Veo 3 • Ingredients to Video หรือ Scenebuilder • Jump To",
       "prompt": "Detailed English Google Flow prompt ready to paste directly",
-      "voiceover": "บทพูดพากย์ภาษาไทย 3-4 วินาที",
+      "voiceover": "บทพูดพากย์ภาษาไทย 2-3 วินาทีกระชับ",
       "audioCue": "คำแนะนำ SFX / BGM / โทนเสียง",
       "camera": "มุมกล้องและการเคลื่อนไหว",
       "onScreenText": "ข้อความขึ้นจอสั้นๆ กระแทกตา",
@@ -470,9 +479,9 @@ Rules:
       index: idx + 1,
       timecode:
         s.timecode ||
-        ['00:00 - 00:03', '00:03 - 00:07', '00:07 - 00:11', '00:11 - 00:15'][idx] ||
-        '00:00 - 00:04',
-      shortTime: s.shortTime || ['0–3s', '3–7s', '7–11s', '11–15s'][idx] || `Shot ${idx + 1}`,
+        ['00:00 - 00:02', '00:02 - 00:05', '00:05 - 00:08', '00:08 - 00:10'][idx] ||
+        '00:00 - 00:02',
+      shortTime: s.shortTime || ['0–2s', '2–5s', '5–8s', '8–10s'][idx] || `Shot ${idx + 1}`,
       role: s.role || `SHOT ${idx + 1}`,
       title: s.title || `ช็อตที่ ${idx + 1}`,
       flowAction: s.flowAction || mode.actionLabels[idx] || mode.name,

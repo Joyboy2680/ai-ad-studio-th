@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Ad Studio TH (Google Flow Edition) — สร้างพรอม Imagen & คลิปขายของ 15 วิ</title>
+    <title>AI Ad Studio TH (Google Flow Edition) — สร้างพรอม Imagen & คลิปขายของ 10 วิ</title>
     <meta
       name="description"
-      content="เว็บแอปสร้างพรอมภาพนิ่ง Imagen และสคริปต์คลิปขายของ 15 วินาที สำหรับ Google Flow (Veo 3 / Veo 2 / Scenebuilder) รองรับ Ingredient 1+2 บีบอัด <=640px ล็อกตัวละครทุกช็อต และ AI Auto-Fill จากลิงก์ด้วย gemini-2.5-flash + Google Search Grounding"
+      content="เว็บแอปสร้างพรอมภาพนิ่ง Imagen และสคริปต์คลิปขายของ 10 วินาที สำหรับ Google Flow (Veo 3 / Veo 2 / Scenebuilder) รองรับ Ingredient 1+2 บีบอัด <=640px ล็อกตัวละคร/มือทุกช็อต และ AI Auto-Fill จากลิงก์ด้วย Gemini 3.5 Flash-Lite + Search Grounding"
     />
     <meta property="og:title" content="AI Ad Studio TH (Google Flow Edition)" />
     <meta
       property="og:description"
-      content="สตูดิโอสร้างพรอมภาพนิ่ง Imagen และคลิปขายของ 15 วิ สำหรับ Google Flow (Veo 3 / Veo 2 / Scenebuilder)"
+      content="สตูดิโอสร้างพรอมภาพนิ่ง Imagen และคลิปขายของ 10 วิ สำหรับ Google Flow (Veo 3 / Veo 2 / Scenebuilder)"
     />
     <meta property="og:type" content="website" />
     <meta name="theme-color" content="#09090b" />
@@ -62,7 +62,7 @@
               <span class="edition-tag">Google Flow Edition</span>
             </h1>
             <p class="brand-subtitle">
-              สร้างพรอมภาพนิ่ง Imagen &amp; คลิปขายของ 15 วิ สำหรับ Veo 3 / Veo 2 / Scenebuilder
+              สร้างพรอมภาพนิ่ง Imagen &amp; คลิปขายของ 10 วิ สำหรับ Veo 3 / Veo 2 / Scenebuilder
             </p>
           </div>
         </div>
@@ -295,7 +295,7 @@
                 <div class="lock-info">
                   <div class="lock-title">🔒 ล็อกตัวละครทุกช็อต (Subject &amp; Ingredient Lock)</div>
                   <div class="lock-desc">
-                    ฝัง Visual Anchor และแท็ก @Ingredient1/@Ingredient2 เหมือนกันทุกช็อต 0–15 วิ
+                    ฝัง Visual Anchor และแท็ก @Ingredient1/@Ingredient2 เหมือนกันทุกช็อต 0–10 วิ
                   </div>
                 </div>
                 <label class="switch" aria-label="เปิดหรือปิดการล็อกตัวละครทุกช็อต">
@@ -315,7 +315,7 @@
             </div>
           </section>
 
-          <!-- Card 3: 3 โหมด Google Flow + 5 แนวทางคลิป 15 วิ -->
+          <!-- Card 3: 3 โหมด Google Flow + 6 แนวทางคลิป 10 วิ (รวม Faceless เห็นแค่มือ) -->
           <section class="glass-card card-pad">
             <div class="section-header">
               <h2 class="section-title">
@@ -330,21 +330,21 @@
             <div class="section-header" style="margin-top: 20px;">
               <h2 class="section-title">
                 <span class="step-badge step-red">04</span>
-                5 แนวทางคลิปขายของ 15 วิ
+                6 แนวทางคลิปขายของ 10 วิ
               </h2>
-              <span class="tech-pill yellow">0–15s Pacing</span>
+              <span class="tech-pill yellow">0–10s Pacing</span>
             </div>
 
             <div id="clipStylesContainer" class="styles-list"></div>
           </section>
 
-          <!-- Card 4: Generate CTA + Fast Processing + 15s Progress Bar -->
+          <!-- Card 4: Generate CTA + Fast Processing + 10s Progress Bar -->
           <section class="glass-card generate-card">
             <button type="button" id="generateBtn" class="btn-generate-main">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                 <polygon points="6 4 20 12 6 20 6 4" fill="currentColor" />
               </svg>
-              <span id="generateBtnText">สร้างพรอม Google Flow &amp; Imagen (15 วิ)</span>
+              <span id="generateBtnText">สร้างพรอม Google Flow &amp; Imagen (10 วิ)</span>
             </button>
 
             <div class="generate-meta-row">
@@ -352,30 +352,30 @@
                 <span class="budget-dot" aria-hidden="true"></span>
                 Engine: <strong>3.5 Flash-Lite</strong> • <code>Fast Mode</code>
               </span>
-              <span class="field-hint">ประมวลผลไวพิเศษ + ครบ 4 แท็บ</span>
+              <span class="field-hint">ประมวลผลไวพิเศษ + ครบทุกแท็บ</span>
             </div>
 
-            <!-- 15-Second Studio Progress Bar -->
+            <!-- 10-Second Studio Progress Bar -->
             <div class="progress-panel" id="progressPanel" aria-live="polite">
               <div class="progress-top">
                 <span class="progress-stage" id="progressStage">เตรียมพร้อมประมวลผล...</span>
-                <span class="progress-timer" id="progressTimer">0.0s / 15.0s</span>
+                <span class="progress-timer" id="progressTimer">0.0s / 10.0s</span>
               </div>
               <div class="progress-track">
                 <div class="progress-fill" id="progressFill"></div>
               </div>
               <div class="progress-ruler">
                 <span>0s Hook</span>
-                <span>5s Demo</span>
-                <span>10s Flat-Lay</span>
-                <span>15s CTA</span>
+                <span>3s Demo</span>
+                <span>6s Proof</span>
+                <span>10s CTA</span>
               </div>
             </div>
           </section>
         </aside>
 
         <!-- ================================================================
-             RIGHT PANEL (7 Columns): 4 Tabs + Slide Carousel + Copy All
+             RIGHT PANEL (7 Columns): 5 Tabs + Slide Carousel + Copy All
              ================================================================ -->
         <section class="panel-right" aria-label="ผลลัพธ์พรอมและสไลด์คลิป">
           <div class="glass-card output-shell">
@@ -405,15 +405,15 @@
               <div class="output-meta-chips" id="outputMetaChips"></div>
             </div>
 
-            <!-- 4 Segmented Glass Navigation Tabs -->
+            <!-- 5 Segmented Glass Navigation Tabs -->
             <div class="tabs-shell">
-              <nav class="tabs-nav" id="tabsNav" role="tablist" aria-label="หมวดผลลัพธ์ 4 แท็บ">
+              <nav class="tabs-nav" id="tabsNav" role="tablist" aria-label="หมวดผลลัพธ์ 5 แท็บ">
                 <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-tab="slides">
                   <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="2" y="4" width="20" height="16" rx="3" />
                     <polygon points="10 9 15 12 10 15 10 9" fill="currentColor" stroke="none" />
                   </svg>
-                  <span>สไลด์คลิป 0-15 วิ</span>
+                  <span>สไลด์คลิป 0-10 วิ</span>
                   <span class="tab-count">4</span>
                 </button>
                 <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="imagen">
@@ -438,7 +438,7 @@
                     <path d="M12 7v5l3 2" />
                   </svg>
                   <span>ดูไทม์ไลน์ทั้งหมด</span>
-                  <span class="tab-count">15s</span>
+                  <span class="tab-count">10s</span>
                 </button>
                 <button type="button" class="tab-btn" role="tab" aria-selected="false" data-tab="ugc-grid">
                   <svg class="tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -724,7 +724,7 @@
 
     <footer class="studio-footer">
       <div>
-        <strong>AI Ad Studio TH (Google Flow Edition)</strong> — สร้างพรอม Imagen &amp; คลิปขายของ 15 วิ
+        <strong>AI Ad Studio TH (Google Flow Edition)</strong> — สร้างพรอม Imagen &amp; คลิปขายของ 10 วิ
       </div>
       <div>
         Powered by <code>gemini-3.5-flash-lite</code> • <code>Fast Mode</code> • URL Context &amp; Google Search Grounding

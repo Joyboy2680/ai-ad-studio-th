@@ -57,6 +57,15 @@ export const CLIP_STYLES = [
       'Fast-paced hands-on product demonstration alternating with crisp overhead flat-lay composition, energetic commercial cuts, bright tactile studio light, modern Bangkok e-commerce aesthetic'
   },
   {
+    id: 'faceless-hands-only',
+    name: 'Faceless มือจับโชว์ขายของ (ไม่เห็นหน้า เห็นแค่มือ)',
+    isDefault: false,
+    isNew: true,
+    shortDesc: 'ไม่เห็นหน้า เห็นแค่มือจับ-แกะ-สาธิตใช้จริงใกล้ๆ สไตล์ POV ขายของไว ไม่ต้องออกกล้อง',
+    englishVibe:
+      'STRICT FACELESS HANDS-ONLY POV product commercial: NO face, NO head, NO body/person visible in any frame — show ONLY clean natural hands and wrists picking up, testing, demonstrating, and holding the product against a cozy sunlit everyday Thai tabletop'
+  },
+  {
     id: 'ugc-talking',
     name: 'UGC รีวิวจริงใจ (Talking Head)',
     isDefault: false,
@@ -68,9 +77,9 @@ export const CLIP_STYLES = [
     id: 'problem-solution',
     name: 'ขยี้ปัญหา-ปิดการขาย (Problem → Solution)',
     isDefault: false,
-    shortDesc: 'เปิด 3 วิแรกด้วย Pain Point ตรงจุด ตามด้วยสินค้าแก้ปัญหาเห็นผลชัดทันที',
+    shortDesc: 'เปิด 2 วิแรกด้วย Pain Point ตรงจุด ตามด้วยสินค้าแก้ปัญหาเห็นผลชัดทันที',
     englishVibe:
-      'High-converting Problem-to-Solution direct response ad: snappy relatable pain-point visual hook in first 3 seconds, dramatic relief transition, clear before/after proof and urgent offer close'
+      'High-converting Problem-to-Solution direct response ad: snappy relatable pain-point visual hook in first 2 seconds, dramatic relief transition, clear before/after proof and urgent offer close'
   },
   {
     id: 'asmr-unboxing',
@@ -130,7 +139,7 @@ export const SAMPLE_PRODUCTS = {
 };
 
 /**
- * Generates a realistic, tailored 0–15s Google Flow + 3 Imagen + Captions plan
+ * Generates a realistic, tailored 0–10s Google Flow + 3 Imagen + Captions plan
  * locally when Demo Mode is used (or when user tests without a Gemini API key).
  */
 export function buildLocalStudioPlan(input) {
@@ -147,6 +156,7 @@ export function buildLocalStudioPlan(input) {
     'Clean modern packaging with crisp specular highlights, aesthetic studio tabletop setup'
   ).trim();
   const aspectRatio = input.aspectRatio || '9:16';
+  const isFaceless = style.id === 'faceless-hands-only';
 
   const hasIng1 = Boolean(input.ingredient1);
   const hasIng2 = Boolean(input.ingredient2);
@@ -155,132 +165,162 @@ export function buildLocalStudioPlan(input) {
     ? '[@Ingredient2: Uploaded Presenter/Scene Reference]'
     : `[Presenter: ${input.characterAnchor || 'Young Thai lifestyle presenter, natural warm lighting'}]`;
 
+  const facelessGuard = isFaceless
+    ? 'STRICT FACELESS RULE: NO faces, NO heads, NO human portraits — frame ONLY close-up hands, fingers, and wrists interacting with the product. '
+    : '';
+
   const lockAnchorText = input.lockCharacter
-    ? `[CHARACTER & SUBJECT LOCK — IDENTICAL ACROSS ALL 4 SHOTS: ${
-        input.characterAnchor ||
-        'Young Thai creator mid-20s, natural friendly expression, consistent minimalist cream wardrobe, same warm studio daylight, exact product branding from @Ingredient1'
-      }]`
+    ? isFaceless
+      ? `[HANDS & PRODUCT LOCK — IDENTICAL ACROSS ALL 4 SHOTS: Clean natural Thai hands with neat manicured nails, consistent sleeve/wrist accessory, same warm natural tabletop daylight, exact product design from ${ingRef1}, NO faces visible]`
+      : `[CHARACTER & SUBJECT LOCK — IDENTICAL ACROSS ALL 4 SHOTS: ${
+          input.characterAnchor ||
+          'Young Thai creator mid-20s, natural friendly expression, consistent minimalist cream wardrobe, same warm studio daylight, exact product branding from @Ingredient1'
+        }]`
     : '[Flexible casting — prioritize product clarity and clean transitions]';
 
   const lockPrefix = input.lockCharacter
-    ? `Keep exact visual continuity of ${ingRef1} and ${ingRef2}. ${lockAnchorText} `
-    : `Showcase ${ingRef1} clearly with vibrant commercial polish. `;
+    ? `${facelessGuard}Keep exact visual continuity of ${ingRef1}${
+        isFaceless ? '' : ` and ${ingRef2}`
+      }. ${lockAnchorText} `
+    : `${facelessGuard}Showcase ${ingRef1} clearly with vibrant commercial polish. `;
 
   const audioModeNote =
     mode.id === 'veo3'
-      ? 'Native Audio ON: Crisp close-mic foley + natural energetic Thai voiceover + subtle modern upbeat lo-fi pop beat.'
+      ? 'Native Audio ON: Crisp close-mic foley + natural energetic Thai voiceover + subtle modern upbeat lo-fi pop beat (10-second tight pacing).'
       : mode.id === 'veo2'
-      ? 'Visual-only B-Roll output (layer Thai voiceover & trending TikTok audio in post-production).'
-      : 'Scenebuilder Continuity ON: Maintain identical color grade, tabletop texture, and subject identity between Jump To / Extend cuts.';
+      ? 'Visual-only B-Roll output (layer Thai voiceover & trending TikTok audio in post-production, 10s fast cut).'
+      : 'Scenebuilder Continuity ON: Maintain identical color grade, tabletop texture, and subject identity between Jump To / Extend cuts (10s total).';
 
-  // Tailor narrative beats slightly per clip style
+  // Tailor narrative beats slightly per clip style (0–10s fast pacing)
   const styleBeats = {
     'fast-hands-on': {
       s1Title: 'Hook หยุดนิ้ว: หยิบโชว์ระยะใกล้ + จังหวะไว',
-      s1Vo: `หยุดเลื่อนก่อน! ใครกำลังมองหา ${productName} ตัวนี้คือจบจริง ไม่จกตา!`,
+      s1Vo: `หยุดเลื่อน! ${productName} ตัวนี้คือจบจริง ไม่จกตา!`,
       s1Text: `ของมันต้องมี! ${productName}`,
       s1Cam: 'Quick whip-in handheld macro to crisp center framing, 24fps snappy commercial cut',
       s1Scene: `Fast energetic hands-on reveal: clean manicured hands pick up ${ingRef1} into center frame with an immediate crisp focus pull. Bright modern Bangkok desk backdrop, sunlit rim highlight.`,
       s2Title: 'Hands-On Demo: สาธิตใช้งานจริงแบบจับต้องได้',
-      s2Vo: `ดูความปังของตัวนี้! ${benefits.slice(0, 72)}${benefits.length > 72 ? '...' : ''}`,
+      s2Vo: `${benefits.slice(0, 62)}${benefits.length > 62 ? '...' : ''}`,
       s2Text: 'ใช้งานจริง เห็นผลชัดทันที',
       s2Cam: 'Tight 45-degree close-up tracking hands demonstrating texture/function smoothly',
       s2Scene: `Seamless hands-on demonstration of ${ingRef1} in real action — tactile close-up showing texture, ergonomic grip, and instant satisfying result. Natural daylight bounce, ultra-sharp micro detail.`,
       s3Title: 'Flat-Lay Studio: จัดวางองค์ประกอบสวยคม + โชว์จุดเด่น',
-      s3Vo: 'ดีไซน์สวย พกพาง่าย คุ้มค่าเกินราคา ใครได้ลองก็ต้องติดใจ!',
+      s3Vo: 'ดีไซน์สวย พกพาง่าย คุ้มค่าเกินราคา ใช้แล้วติดใจ!',
       s3Text: 'ครบจบในชิ้นเดียว • รีวิวแน่น',
       s3Cam: '90-degree overhead Top-Down Flat-Lay slow micro-glide with subtle shadow play',
       s3Scene: `Crisp overhead 90-degree flat-lay composition featuring ${ingRef1} centered neatly among curated minimalist lifestyle props (${visualDetails}). Subtle diagonal sunlight rays across clean matte stone surface.`,
       s4Title: 'Offer & CTA: ปิดการขายด่วน พร้อมพื้นที่วางโปร',
-      s4Vo: `รีบกดตะกร้าเลย! ${pricePromo} ของมีจำนวนจำกัด กดสั่งตอนนี้เลย!`,
+      s4Vo: `${pricePromo} รีบกดตะกร้าเลย!`,
       s4Text: `${pricePromo} • กดตะกร้าเลย!`,
       s4Cam: 'Hero push-in packshot with clean upper/lower negative space for promo overlay',
       s4Scene: `Hero packshot close-up of ${ingRef1} rotating subtly on a sunlit pedestal with confident presenter hand gesturing subtly near frame edge. Leave clean negative space at top and bottom for Thai promo typography.`
     },
+    'faceless-hands-only': {
+      s1Title: 'Hands-Only Hook: มือหยิบโชว์ระยะใกล้ (ไม่เห็นหน้า)',
+      s1Vo: `ไม่ต้องออกกล้องก็ป้ายยาได้! นี่คือ ${productName} ที่คนรีวิวแน่นสุด!`,
+      s1Text: `ซูมใกล้ๆ • ${productName}`,
+      s1Cam: 'First-person POV tabletop angle, tight wrist-to-fingertips framing, zero face or head in shot',
+      s1Scene: `First-person POV faceless shot: clean manicured hands reach smoothly into frame and lift ${ingRef1} up toward the lens on a cozy sunlit wooden table (${visualDetails}). Frame strictly below shoulder/hands-only — NO person's face or head visible.`,
+      s2Title: 'Hands-Only Demo: สองมือลองใช้-เปิด/กด/เท ให้ดูชัดๆ',
+      s2Vo: `ดูความปังตอนใช้งานจริง! ${benefits.slice(0, 60)}`,
+      s2Text: 'เห็นแค่มือ ก็ชัดทุกดีเทล',
+      s2Cam: '45-degree macro hands-only close-up tracking fingers operating/testing the product',
+      s2Scene: `Tight faceless macro shot of two hands demonstrating ${ingRef1} in real action — opening, pressing, applying, or pouring smoothly so texture and real functionality shine clearly. Warm natural window light, crisp skin and packaging detail, zero faces.`,
+      s3Title: 'Hands-Only Proof: มือวางจัดมุม/เช็กคุณภาพรอบด้าน',
+      s3Vo: 'งานดี พกพาง่าย วางตรงไหนก็มินิมอล ใช้งานได้จริงทุกวัน!',
+      s3Text: 'ใช้งานจริงทุกวัน 10/10',
+      s3Cam: 'Top-down POV glide as one hand turns product slowly and taps key highlight',
+      s3Scene: `Overhead POV shot: one hand gently rotates ${ingRef1} beside everyday desk/bag essentials to reveal clean finish and build quality, tapping lightly on the key detail. Natural daylight shadows, strictly hands-only with zero faces.`,
+      s4Title: 'Hands-Only CTA: มือถือโชว์นิ่ง + ชี้ปิดตะกร้าใน 2 วิ',
+      s4Vo: `โปรนี้คุ้มมาก ${pricePromo} กดตะกร้าได้เลย!`,
+      s4Text: `${pricePromo} • จิ้มตะกร้าเลย`,
+      s4Cam: 'Steady POV hero hold in upper-center frame with clean bottom space for CTA',
+      s4Scene: `Clean faceless end-frame: steady hand holds ${ingRef1} clearly in focus against soft sunlit bokeh while other index finger points gently downward toward basket CTA area. Zero faces, crisp label legibility.`
+    },
     'ugc-talking': {
       s1Title: 'UGC Hook: ทักเพื่อนแบบคนใช้จริง',
-      s1Vo: `แก~ วันนี้มารีวิว ${productName} ที่ใช้จริงแล้วชอบมากจนต้องบอกต่อ!`,
+      s1Vo: `แก~ วันนี้มารีวิว ${productName} ที่ใช้จริงแล้วเลิฟมาก!`,
       s1Text: `รีวิวใช้จริง: ${productName}`,
       s1Cam: 'Vertical eye-level smartphone selfie angle, natural window lighting',
       s1Scene: `Relatable Thai UGC creator holds ${ingRef1} casually near cheek while smiling warmly at camera in a sunlit Bangkok condo living room, authentic handheld micro-movement.`,
       s2Title: 'UGC Demo: ลองใช้ให้ดูสดๆ หน้ากล้อง',
-      s2Vo: `ที่เลิฟสุดคือ ${benefits.slice(0, 70)} ใช้ง่ายมากทุกวันเลย`,
+      s2Vo: `ที่ชอบสุดคือ ${benefits.slice(0, 62)} ใช้ง่ายมาก!`,
       s2Text: 'ลองใช้จริงให้ดูชัดๆ',
       s2Cam: 'Medium close-up cut-in showing natural hands-on application/use',
       s2Scene: `Creator naturally demonstrates ${ingRef1} up close toward the lens, genuine impressed expression, soft diffused daylight illuminating realistic texture and packaging.`,
       s3Title: 'UGC Proof: โชว์ผลลัพธ์ + รายละเอียดใกล้ๆ',
-      s3Vo: 'ดูใกล้ๆ คือดีงามมาก คุ้มสุดๆ ไม่แปลกใจทำไมคนรีวิวเยอะ!',
+      s3Vo: 'ดูใกล้ๆ คือดีงาม คุ้มสุดๆ ไม่แปลกใจทำไมคนรีวิวเยอะ!',
       s3Text: 'ของดีบอกต่อ 10/10',
       s3Cam: 'Quick candid macro tilt down to product details & result',
       s3Scene: `Quick candid close-up panning across ${ingRef1} held in creator's palm with soft bokeh background (${visualDetails}), authentic smartphone color science.`,
       s4Title: 'UGC CTA: ป้ายยาปิดจบ กดตะกร้า',
-      s4Vo: `แปะพิกัดไว้ให้แล้วนะ ${pricePromo} รีบไปตำก่อนหมด!`,
+      s4Vo: `แปะพิกัดแล้วนะ ${pricePromo} รีบตำก่อนหมด!`,
       s4Text: `พิกัดตะกร้าเหลือง • ${pricePromo}`,
       s4Cam: 'Friendly wave + product held clearly in lower-center frame',
       s4Scene: `Creator smiles warmly pointing gently toward lower frame while holding ${ingRef1} steady in sharp focus, cozy sunlit room, clean headroom for promo badge.`
     },
     'problem-solution': {
-      s1Title: 'Pain Point Hook: ขยี้ปัญหาใน 3 วิแรก',
-      s1Vo: 'เบื่อไหมกับปัญหาเดิมๆ ที่แก้เท่าไหร่ก็ไม่จบสักที? ลองดูนี่!',
+      s1Title: 'Pain Point Hook: ขยี้ปัญหาใน 2 วิแรก',
+      s1Vo: 'เบื่อไหมปัญหาเดิมๆ ที่แก้ไม่จบ? ลองดูตัวนี้!',
       s1Text: 'เจอปัญหานี้อยู่ใช่ไหม?',
       s1Cam: 'Dynamic push-in medium shot, slightly desaturated cool mood shifting bright',
       s1Scene: `Relatable Thai presenter looks mildly frustrated with everyday hassle in dim cool light, then bright warm light snaps in as ${ingRef1} enters frame dramatically.`,
       s2Title: 'Solution Reveal: เปิดตัวพระเอกแก้ปัญหา',
-      s2Vo: `นี่เลย ${productName}! ${benefits.slice(0, 72)}`,
+      s2Vo: `นี่เลย ${productName}! ${benefits.slice(0, 64)}`,
       s2Text: `จบทุกปัญหาด้วย ${productName}`,
       s2Cam: 'Crisp high-energy hero orbit & macro highlight',
       s2Scene: `Dynamic commercial reveal of ${ingRef1} with clean crisp lighting shift to vibrant warm daylight, hands demonstrating key feature smoothly and effortlessly.`,
       s3Title: 'Proof & Comparison: เห็นความต่างชัดเจน',
-      s3Vo: 'ใช้งานจริงแค่ไม่กี่วิ เห็นความต่างแบบชัดเจน มั่นใจได้ทุกวัน!',
+      s3Vo: 'ใช้แค่ไม่กี่วิ เห็นความต่างชัด มั่นใจได้ทุกวัน!',
       s3Text: 'เห็นผลต่างชัดเจนตั้งแต่ครั้งแรก',
       s3Cam: 'Smooth split-feel pan from usage action to clean flat-lay proof',
       s3Scene: `Confident result showcase alongside crisp studio arrangement of ${ingRef1} (${visualDetails}), glowing highlights reinforcing immediate visible satisfaction.`,
       s4Title: 'Urgent CTA: ปิดการขายด้วยโปรแรง',
-      s4Vo: `อย่ารอช้า! ${pricePromo} กดสั่งซื้อที่ตะกร้าตอนนี้เลย!`,
+      s4Vo: `อย่ารอช้า! ${pricePromo} กดตะกร้าตอนนี้เลย!`,
       s4Text: `${pricePromo} (ด่วน!)`,
       s4Cam: 'Confident slow push-in hero packshot with sharp contrast',
       s4Scene: `Bold high-contrast commercial end-frame of ${ingRef1} gleaming under studio rim light with clean composition tailored for bold CTA sticker.`
     },
     'asmr-unboxing': {
       s1Title: 'ASMR Hook: แกะซีล & เปิดกล่องฟินๆ',
-      s1Vo: '(เสียงแกะกล่องคมชัด) เปิดกล่องความละมุนไปกับ ' + productName,
+      s1Vo: '(เสียงแกะกล่องคมชัด) เปิดความละมุนไปกับ ' + productName,
       s1Text: `ASMR Unboxing • ${productName}`,
       s1Cam: 'Ultra-close macro top-angle, shallow depth of field f/2.0',
       s1Scene: `Intimate macro shot of delicate hands peeling seal and sliding open box to reveal ${ingRef1} nestled in sleek packaging, warm golden window rays, crisp dust motes.`,
       s2Title: 'Sensory Texture: สัมผัสเนื้อ/ดีเทลแบบมาโคร',
-      s2Vo: `สัมผัสพรีเมียมทุกดีเทล ${benefits.slice(0, 66)}`,
+      s2Vo: `สัมผัสพรีเมียมทุกดีเทล ${benefits.slice(0, 60)}`,
       s2Text: 'ดีเทลพรีเมียม สัมผัสละมุน',
       s2Cam: 'Slow hypnotic 60fps-feel macro glide across texture and surfaces',
       s2Scene: `Extreme close-up tactile sensory showcase of ${ingRef1} — gentle tap, smooth glide, subtle shimmer of textures (${visualDetails}) with dreamy bokeh.`,
       s3Title: 'Aesthetic Flat-Lay: จัดโต๊ะสไตล์มินิมอล',
-      s3Vo: 'วางตรงไหนก็ดูดี ใช้งานฟินทุกวันเหมือนอยู่คาเฟ่หรู',
+      s3Vo: 'วางตรงไหนก็ดูดี ใช้งานฟินทุกวันเหมือนอยู่คาเฟ่',
       s3Text: 'Aesthetic 100% ทุกมุมมอง',
       s3Cam: 'Slow overhead float with gentle dappled leaf shadows',
       s3Scene: `Serene aesthetic flat-lay of ${ingRef1} on warm travertine stone with soft moving botanical shadow patterns and subtle golden light reflection.`,
       s4Title: 'Calm Luxury CTA: ปิดจบละมุน ชวนกด',
-      s4Vo: `ให้รางวัลตัวเองวันนี้ ${pricePromo} กดตะกร้าด้านล่างได้เลย`,
+      s4Vo: `ให้รางวัลตัวเองวันนี้ ${pricePromo} กดตะกร้าเลย`,
       s4Text: `${pricePromo} • กดสั่งเลย`,
       s4Cam: 'Gentle slow push-in hero still-life with warm glow',
       s4Scene: `Minimalist gallery-like hero frame of ${ingRef1} bathed in golden-hour light, peaceful refined negative space ready for clean Thai price callout.`
     },
     'luxury-cinematic': {
       s1Title: 'Cinematic Open: เปิดซีนแสง Rim Light ระดับแบรนด์ดัง',
-      s1Vo: `ยกระดับมาตรฐานใหม่แห่งความเหนือระดับกับ ${productName}`,
+      s1Vo: `ยกระดับมาตรฐานใหม่กับ ${productName}`,
       s1Text: `NEW STANDARD • ${productName}`,
       s1Cam: 'Low-angle precision cinema dolly reveal, anamorphic lens flare hint',
       s1Scene: `Dramatic luxury commercial reveal of ${ingRef1} emerging from sculpted dark architectural shadows into crisp golden-white rim light, subtle atmospheric sheen.`,
       s2Title: 'Precision Craft: โชว์งานดีไซน์และประสิทธิภาพ',
-      s2Vo: `${benefits.slice(0, 76)} ออกแบบมาเพื่อคุณโดยเฉพาะ`,
+      s2Vo: `${benefits.slice(0, 66)} ออกแบบมาเพื่อคุณ`,
       s2Text: 'CRAFTED FOR EXCELLENCE',
       s2Cam: 'Robotic smooth macro arc tracking glistening edges and presenter interaction',
       s2Scene: `Ultra-crisp luxury macro motion as poised hands glide ${ingRef1} across polished dark marble, studio specular reflections dancing across packaging (${visualDetails}).`,
       s3Title: 'Editorial Lifestyle: ภาพลักษณ์พรีเมียมน่าเชื่อถือ',
-      s3Vo: 'มั่นใจทุกช่วงเวลา สัมผัสความแตกต่างที่เหนือกว่าอย่างแท้จริง',
+      s3Vo: 'มั่นใจทุกช่วงเวลา สัมผัสความแตกต่างที่เหนือกว่า',
       s3Text: 'PREMIUM QUALITY GUARANTEED',
       s3Cam: 'Cinematic 50mm shallow DOF slow-motion editorial portrait + product',
       s3Scene: `Editorial high-fashion lifestyle shot featuring presenter with ${ingRef1} in sleek modern penthouse lighting, refined color grading, rich filmic contrast.`,
       s4Title: 'Prestige CTA: ปิดท้ายหรูหราพร้อมข้อเสนอพิเศษ',
-      s4Vo: `เป็นเจ้าของได้แล้ววันนี้ ${pricePromo} สั่งซื้อเลย`,
+      s4Vo: `เป็นเจ้าของวันนี้ ${pricePromo} สั่งซื้อเลย`,
       s4Text: `${pricePromo} • SHOP NOW`,
       s4Cam: 'Locked symmetrical luxury packshot push-in, subtle light sweep',
       s4Scene: `Iconic symmetrical luxury hero packshot of ${ingRef1} centered on sleek dark monolith with soft light sweep across logo, generous clean framing for luxury CTA.`
@@ -292,8 +332,8 @@ export function buildLocalStudioPlan(input) {
   const slides = [
     {
       index: 1,
-      timecode: '00:00 - 00:03',
-      shortTime: '0–3s',
+      timecode: '00:00 - 00:02',
+      shortTime: '0–2s',
       role: 'HOOK / หยุดนิ้ว',
       title: b.s1Title,
       flowAction: mode.actionLabels[0],
@@ -305,25 +345,25 @@ export function buildLocalStudioPlan(input) {
       voiceover: b.s1Vo,
       audioCue:
         mode.id === 'veo3'
-          ? 'SFX: Crisp whoosh + tactile tap • BGM: Modern Thai pop-beat intro (118 BPM) • VO ชัดใส'
+          ? 'SFX: Crisp whoosh + tactile tap • BGM: Modern Thai pop-beat intro (122 BPM) • VO กระชับไว'
           : 'แนะนำใส่เสียง SFX "Pop/Whoosh" เปิดคลิป + พากย์เสียงจังหวะกระชับ',
       camera: b.s1Cam,
       onScreenText: b.s1Text,
       continuityNote:
         mode.id === 'scenebuilder'
-          ? 'เริ่มจากอัปโหลด Ingredient 1+2 ในโหมด Ingredients to Video เพื่อตั้งค่าแสงและตัวละครฐาน (Base Clip)'
-          : 'ตั้งค่าแสงและมุมมองสินค้าให้ชัดตั้งแต่เฟรมแรก เพื่อดึงความสนใจใน 1.5 วินาทีแรก'
+          ? 'เริ่มจากอัปโหลด Ingredient 1 ในโหมด Ingredients to Video เพื่อตั้งค่าแสงและพื้นผิวฐาน (Base Clip)'
+          : 'ตั้งค่าแสงและมุมมองสินค้าให้ชัดตั้งแต่เฟรมแรก เพื่อดึงความสนใจใน 1 วินาทีแรก'
     },
     {
       index: 2,
-      timecode: '00:03 - 00:07',
-      shortTime: '3–7s',
+      timecode: '00:02 - 00:05',
+      shortTime: '2–5s',
       role: 'DEMO / โชว์จุดเด่น',
       title: b.s2Title,
       flowAction: mode.actionLabels[1],
       prompt: `${lockPrefix}${
         mode.id === 'scenebuilder'
-          ? 'Jump To tight hands-on demonstration preserving identical lighting, skin tone, wardrobe, and product appearance from previous clip. '
+          ? 'Jump To tight hands-on demonstration preserving identical lighting, hand skin tone, tabletop surface, and product appearance from previous clip. '
           : ''
       }${b.s2Scene} Highlight key benefit visually: ${benefits.slice(0, 90)}. Camera: ${b.s2Cam}. Aspect ratio ${aspectRatio}, crisp macro detail, natural skin and material physics. ${
         mode.id === 'veo3'
@@ -340,13 +380,13 @@ export function buildLocalStudioPlan(input) {
       continuityNote:
         mode.id === 'scenebuilder'
           ? 'กด "Jump To" จากคลิป Shot 1 ใน Scenebuilder แล้ววางพรอมนี้เพื่อสลับมุมโคลสอัปโดยไม่หลุดโทนสี'
-          : 'รักษาโทนสีแสงธรรมชาติให้ต่อเนื่องจากช็อต 1 เพื่อให้จังหวะตัดต่อลื่นไหล'
+          : 'รักษาโทนสีแสงธรรมชาติให้ต่อเนื่องจากช็อต 1 เพื่อให้จังหวะตัดต่อ 10 วิลื่นไหล'
     },
     {
       index: 3,
-      timecode: '00:07 - 00:11',
-      shortTime: '7–11s',
-      role: 'FLAT-LAY & PROOF',
+      timecode: '00:05 - 00:08',
+      shortTime: '5–8s',
+      role: 'PROOF / จุดขายชัด',
       title: b.s3Title,
       flowAction: mode.actionLabels[2],
       prompt: `${lockPrefix}${
@@ -367,13 +407,13 @@ export function buildLocalStudioPlan(input) {
       onScreenText: b.s3Text,
       continuityNote:
         mode.id === 'scenebuilder'
-          ? 'ใช้ "Jump To" เปลี่ยนมุมเป็น Flat-Lay / Lifestyle เพื่อเพิ่มความน่าเชื่อถือและมิติภาพ'
+          ? 'ใช้ "Jump To" เปลี่ยนมุมเพื่อเพิ่มความน่าเชื่อถือและมิติภาพก่อนปิดการขาย'
           : 'คุมฉากหลังให้สะอาดตา เพื่อให้ข้อความรีวิวหรือจุดเด่นอ่านง่ายบนจอมือถือ'
     },
     {
       index: 4,
-      timecode: '00:11 - 00:15',
-      shortTime: '11–15s',
+      timecode: '00:08 - 00:10',
+      shortTime: '8–10s',
       role: 'OFFER & CTA / ปิดการขาย',
       title: b.s4Title,
       flowAction: mode.actionLabels[3],
@@ -409,7 +449,9 @@ export function buildLocalStudioPlan(input) {
       prompt: `Commercial advertising hero photography of ${productName}, ${visualDetails}. ${
         input.lockCharacter
           ? `Consistent subject reference: ${
-              input.characterAnchor || 'modern Thai lifestyle aesthetic'
+              isFaceless
+                ? 'clean hands-only product presentation, no face'
+                : input.characterAnchor || 'modern Thai lifestyle aesthetic'
             }.`
           : ''
       } Dramatic crisp studio rim lighting, subtle floating micro highlights, clean minimalist stone surface, shallow depth of field 85mm f/1.8 lens, photorealistic editorial campaign quality, razor-sharp product focus, clean upper negative space for Thai headline typography, aspect ratio ${aspectRatio}, no garbled text, no watermark.`
@@ -420,8 +462,10 @@ export function buildLocalStudioPlan(input) {
       ratio: '4:5',
       purpose: 'ใช้เป็น Ingredient Reference หรือโพสต์รีวิว/คาร์รูเซลให้ดูสมจริงเข้าถึงง่าย',
       prompt: `Authentic high-end Thai lifestyle hands-on photography showing ${
-        input.characterAnchor || 'a young Thai creator with warm natural skin tone'
-      } holding and using ${productName} in a sunlit modern Bangkok studio apartment. Soft natural window light, candid genuine smile, tactile focus on product texture and ergonomic design, Kodak Portra 400 clean commercial color grading, 50mm lens f/2.0, realistic skin texture, crisp product label integrity, aspect ratio 4:5, no distorted fingers, no watermark.`
+        isFaceless
+          ? 'close-up clean manicured hands only (strictly no face visible)'
+          : input.characterAnchor || 'a young Thai creator with warm natural skin tone'
+      } holding and using ${productName} in a sunlit modern Bangkok studio apartment. Soft natural window light, tactile focus on product texture and ergonomic design, Kodak Portra 400 clean commercial color grading, 50mm lens f/2.0, realistic skin texture, crisp product label integrity, aspect ratio 4:5, no distorted fingers, no watermark.`
     },
     {
       id: 3,
@@ -465,7 +509,7 @@ export function buildLocalStudioPlan(input) {
     '#GoogleFlow',
     '#Veo3',
     '#AIAdStudioTH',
-    '#คลิปขายของ15วิ'
+    '#คลิปขายของ10วิ'
   ];
 
   return {
