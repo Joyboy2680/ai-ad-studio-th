@@ -157,11 +157,23 @@ EXTERNAL_VIDEO_API_KEY=your_provider_key
 
 ---
 
-## 6. Cloud Deployment (Deploy ขึ้น Cloud ใน 1 Container)
+## 6. Cloud Deployment (GitHub Codespaces + GitHub Pages + Cloud Containers)
 
-โปรเจกต์นี้รองรับการรันแบบ **Single Container** (Multi-stage [`Dockerfile`](./Dockerfile) รวม React Frontend + FastAPI + FFmpeg + ฟอนต์ภาษาไทย Loma) ทำให้ Deploy ขึ้น Cloud ได้ทันทีโดยไม่ต้องตั้งค่า CORS แยก และรองรับการวางคีย์ Service Account ผ่าน Environment Variable (`GOOGLE_SERVICE_ACCOUNT_JSON`) โดยไม่ต้องอัปโหลดไฟล์
+โปรเจกต์นี้รองรับทั้งการใช้งานบน **GitHub โดยตรง** และ Deploy แบบ **Single Container** (Multi-stage [`Dockerfile`](./Dockerfile) รวม React Frontend + FastAPI + FFmpeg + ฟอนต์ภาษาไทย Loma)
 
-### ตัวเลือกที่ 1: Render.com (แนะนำ — ฟรีเริ่มต้น, กด 1 คลิก)
+### ตัวเลือก A: GitHub Codespaces (รันครบ 100% บน GitHub — ฟรี 60 ชม./เดือน ไม่ต้องสมัครเว็บอื่น)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Joyboy2680/ai-ad-studio-th?quickstart=1)
+
+1. กดปุ่ม **Open in GitHub Codespaces** ด้านบน (ระบบจะอ่าน [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json) ติดตั้ง FFmpeg + ฟอนต์ไทย + Build เว็บ และสตาร์ทเซิร์ฟเวอร์พอร์ต `8000` ให้อัตโนมัติ)
+2. เมื่อรันเสร็จ กดเปิดพอร์ต `8000` (`Affiliate Pipeline App`) เพื่อใช้งานเต็มระบบทั้ง UI + AI + FFmpeg + Google Drive ได้ทันที
+3. หากต้องการเปิดโหมดจริง (`MOCK_MODE=false`) สามารถใส่คีย์ใน `.env` หรือตั้งค่าใน **GitHub Settings → Secrets and variables → Codespaces**
+
+### ตัวเลือก B: GitHub Pages Dashboard (`/pipeline/`) + เชื่อมต่อ Backend URL
+- เปิดหน้า Dashboard ออนไลน์ฟรี 24 ชม.: **https://joyboy2680.github.io/ai-ad-studio-th/pipeline/**
+- กดปุ่ม **Backend API** มุมขวาบน เพื่อวางลิงก์ Backend (จาก Render / Railway / Codespaces พอร์ต 8000) หรือส่งผ่านพารามิเตอร์ `?api=https://your-backend-url` ได้ทันที
+- อัปเดตหน้า GitHub Pages ใหม่ได้ด้วยคำสั่ง `cd frontend && npm run build:pages`
+
+### ตัวเลือก C: Render.com (Backend + UI ครบจบใน 1 คลิก — ฟรีเริ่มต้น)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Joyboy2680/ai-ad-studio-th)
 
 1. กดปุ่ม **Deploy to Render** ด้านบน (ระบบจะอ่าน [`render.yaml`](./render.yaml) อัตโนมัติ)

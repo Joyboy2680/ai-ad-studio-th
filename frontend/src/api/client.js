@@ -1,7 +1,47 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+const STORAGE_KEY = "affiliate_pipeline_api_base";
+const ENV_API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+
+// Allow passing ?api=https://your-backend-url directly in the URL
+if (typeof window !== "undefined") {
+  const params = new URLSearchParams(window.location.search);
+  const apiFromQuery = params.get("api");
+  if (apiFromQuery && apiFromQuery.trim()) {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      apiFromQuery.trim().replace(/\/+$/, "")
+    );
+  }
+}
+
+export function isGitHubPagesHost() {
+  if (typeof window === "undefined") return false;
+  return window.location.hostname.endsWith(".github.io");
+}
+
+export function getApiBaseUrl() {
+  if (typeof window !== "undefined") {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved && saved.trim()) {
+      return saved.trim().replace(/\/+$/, "");
+    }
+  }
+  return ENV_API_BASE;
+}
+
+export function setApiBaseUrl(url) {
+  if (typeof window === "undefined") return "";
+  const cleaned = (url || "").trim().replace(/\/+$/, "");
+  if (cleaned) {
+    window.localStorage.setItem(STORAGE_KEY, cleaned);
+  } else {
+    window.localStorage.removeItem(STORAGE_KEY);
+  }
+  return cleaned;
+}
 
 async function request(path, options = {}) {
-  const url = `${API_BASE}${path}`;
+  const base = getApiBaseUrl();
+  const url = `${base}${path}`;
   const resp = await fetch(url, options);
 
   if (resp.status === 204) {
@@ -40,14 +80,14 @@ export function resolveMediaUrl(url) {
     return url;
   }
   if (url.startsWith("/")) {
-    return `${API_BASE}${url}`;
+    return `${getApiBaseUrl()}${url}`;
   }
   return url;
 }
 
 export function getProductVideoUrl(productId, cacheBust = "") {
   const suffix = cacheBust ? `?v=${encodeURIComponent(cacheBust)}` : "";
-  return `${API_BASE}/api/products/${productId}/video${suffix}`;
+  return `${getApiBaseUrl()}/api/products/${productId}/video${suffix}`;
 }
 
 export function fetchHealth() {

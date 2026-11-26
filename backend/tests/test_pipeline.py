@@ -391,6 +391,16 @@ def test_api_deduplication_and_csv_import(isolated_env):
         payload = list_resp.json()
         assert payload["kpi"]["total_products"] == 2
         assert payload["kpi"]["pending_approval"] == 2
+
+        # Verify GitHub Pages CORS preflight works
+        cors_gh = client.options(
+            "/api/products",
+            headers={
+                "Origin": "https://joyboy2680.github.io",
+                "Access-Control-Request-Method": "POST",
+            },
+        )
+        assert cors_gh.headers.get("access-control-allow-origin") == "https://joyboy2680.github.io"
     runner.shutdown(wait=True)
 
 

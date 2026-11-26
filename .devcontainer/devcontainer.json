@@ -1,0 +1,33 @@
+{
+  "name": "Affiliate Auto-Content & Video Pipeline (TikTok / Shopee)",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "forwardPorts": [8000, 5173],
+  "portsAttributes": {
+    "8000": {
+      "label": "Affiliate Pipeline App (UI + API)",
+      "onAutoForward": "openBrowser"
+    },
+    "5173": {
+      "label": "Vite Frontend Dev Server (Optional)",
+      "onAutoForward": "silent"
+    }
+  },
+  "secrets": {
+    "GEMINI_API_KEY": {
+      "description": "Google AI Studio Gemini API Key (optional when MOCK_MODE=true)"
+    },
+    "GOOGLE_DRIVE_ROOT_FOLDER_ID": {
+      "description": "Shared Google Drive Root Folder ID for Service Account uploads"
+    },
+    "GOOGLE_SERVICE_ACCOUNT_JSON": {
+      "description": "Raw or Base64-encoded Google Cloud Service Account JSON"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postAttachCommand": "bash .devcontainer/start.sh"
+}

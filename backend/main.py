@@ -82,6 +82,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.github\.io|[a-zA-Z0-9-]+\.app\.github\.dev|[a-zA-Z0-9-]+\.onrender\.com)$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

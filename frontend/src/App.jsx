@@ -3,8 +3,10 @@ import {
   Activity,
   AlertTriangle,
   Clapperboard,
+  ExternalLink,
   Plus,
   RefreshCw,
+  Server,
 } from "lucide-react";
 import {
   approveProduct,
@@ -12,8 +14,11 @@ import {
   fetchHealth,
   fetchProducts,
   formatCopyableCaption,
+  getApiBaseUrl,
+  isGitHubPagesHost,
   retryProduct,
   scoreProduct,
+  setApiBaseUrl,
   updateProduct,
 } from "./api/client";
 import AddProductModal from "./components/AddProductModal";
@@ -26,6 +31,11 @@ const ACTIVE_PIPELINE_STATUSES = new Set([
   "GENERATING_VIDEO",
   "SYNCING_DRIVE",
 ]);
+
+const CODESPACES_LAUNCH_URL =
+  "https://codespaces.new/Joyboy2680/ai-ad-studio-th?quickstart=1";
+const RENDER_DEPLOY_URL =
+  "https://render.com/deploy?repo=https://github.com/Joyboy2680/ai-ad-studio-th";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -40,6 +50,13 @@ export default function App() {
   });
   const [loading, setLoading] = useState(true);
   const [errorBanner, setErrorBanner] = useState("");
+
+  // Backend URL settings (especially useful when opened from GitHub Pages)
+  const onGitHubPages = useMemo(() => isGitHubPagesHost(), []);
+  const [apiUrlInput, setApiUrlInput] = useState(() => getApiBaseUrl());
+  const [apiSettingsOpen, setApiSettingsOpen] = useState(
+    () => isGitHubPagesHost() && !getApiBaseUrl()
+  );
 
   // Filters & Selection
   const [activeStatus, setActiveStatus] = useState("ALL");
@@ -59,8 +76,26 @@ export default function App() {
     window.__toastTimer = window.setTimeout(() => setToast(null), 3500);
   }, []);
 
+  const refreshHealth = useCallback(async () => {
+    try {
+      const h = await fetchHealth();
+      setHealth(h);
+      return h;
+    } catch {
+      setHealth(null);
+      return null;
+    }
+  }, []);
+
   const loadData = useCallback(
     async ({ silent = false } = {}) => {
+      // On GitHub Pages without a Backend URL configured yet, avoid noisy 404 errors
+      if (onGitHubPages && !getApiBaseUrl()) {
+        setLoading(false);
+        setErrorBanner("");
+        return;
+      }
+
       if (!silent) setLoading(true);
       try {
         const data = await fetchProducts({
@@ -73,21 +108,21 @@ export default function App() {
         setErrorBanner("");
       } catch (err) {
         setErrorBanner(
-          err.message || "ไม่สามารถเชื่อมต่อ Backend API ได้ กรุณาตรวจสอบว่า FastAPI กำลังทำงานอยู่"
+          err.message ||
+            "ไม่สามารถเชื่อมต่อ Backend API ได้ กรุณาตรวจสอบลิงก์ Backend หรือเปิดเซิร์ฟเวอร์"
         );
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [activeStatus, searchQuery, sortBy]
+    [activeStatus, searchQuery, sortBy, onGitHubPages]
   );
 
   // Initial health check
   useEffect(() => {
-    fetchHealth()
-      .then(setHealth)
-      .catch(() => setHealth(null));
-  }, []);
+    if (onGitHubPages && !getApiBaseUrl()) return;
+    refreshHealth();
+  }, [onGitHubPages, refreshHealth]);
 
   // Load products whenever filters/sort change
   useEffect(() => {
@@ -112,6 +147,23 @@ export default function App() {
     () => products.find((p) => p.id === selectedProductId) || null,
     [products, selectedProductId]
   );
+
+  const handleSaveApiUrl = async (e) => {
+    e.preventDefault();
+    const cleaned = setApiBaseUrl(apiUrlInput);
+    setApiUrlInput(cleaned);
+    const h = await refreshHealth();
+    if (h) {
+      showToast("เชื่อมต่อ Backend สำเร็จ!");
+      setApiSettingsOpen(false);
+      await loadData();
+    } else {
+      showToast(
+        "เชื่อมต่อไม่ได้ กรุณาเช็กว่า Backend URL ถูกต้องและเซิร์ฟเวอร์เปิดอยู่",
+        "error"
+      );
+    }
+  };
 
   const markBusy = (id, busy) => {
     setBusyIds((prev) => {
@@ -227,7 +279,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {health && (
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${
@@ -236,9 +288,15 @@ export default function App() {
                     : "border-emerald-200 bg-emerald-50 text-emerald-800"
                 }`}
               >
-                {health.mock_mode ? "โหมดทดสอบ (MOCK_MODE)" : "โหมดใช้งานจริง (LIVE)"}
+                {health.mock_mode
+                  ? "โหมดทดสอบ (MOCK_MODE)"
+                  : "โหมดใช้งานจริง (LIVE)"}
                 <span className="text-slate-400">•</span>
-                <span>{health.video_provider === "ffmpeg" ? "FFmpeg Local" : "External I2V"}</span>
+                <span>
+                  {health.video_provider === "ffmpeg"
+                    ? "FFmpeg Local"
+                    : "External I2V"}
+                </span>
               </span>
             )}
 
@@ -248,6 +306,21 @@ export default function App() {
                 อัปเดตสถานะอัตโนมัติทุก 3 วิ
               </span>
             )}
+
+            <button
+              type="button"
+              id="btn-api-settings"
+              onClick={() => setApiSettingsOpen((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                apiSettingsOpen || (onGitHubPages && !health)
+                  ? "border-orange-300 bg-orange-50 text-orange-800"
+                  : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+              title="ตั้งค่า Backend API URL"
+            >
+              <Server className="h-3.5 w-3.5" />
+              Backend API
+            </button>
 
             <button
               type="button"
@@ -274,6 +347,65 @@ export default function App() {
 
       {/* Main Workspace */}
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        {/* GitHub Pages / External Backend Connection Panel */}
+        {apiSettingsOpen && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-1">
+                <h2 className="text-sm font-bold text-slate-900">
+                  เชื่อมต่อ Backend Server (FastAPI + FFmpeg + SQLite)
+                </h2>
+                <p className="text-xs text-slate-500">
+                  {onGitHubPages
+                    ? "หน้าเว็บนี้โฮสต์อยู่บน GitHub Pages (Static) — วางลิงก์ Backend จาก Render / Railway หรือเปิดรันครบชุดบน GitHub Codespaces ได้ทันที"
+                    : "ปล่อยว่างไว้เพื่อใช้ Backend บนโดเมนเดียวกัน (ค่าเริ่มต้นสำหรับ Docker / Render / Codespaces)"}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={CODESPACES_LAUNCH_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                >
+                  เปิดรันครบชุดบน GitHub Codespaces
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href={RENDER_DEPLOY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Deploy Backend ฟรีบน Render
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleSaveApiUrl}
+              className="mt-4 flex flex-col gap-2 sm:flex-row"
+            >
+              <input
+                id="input-backend-api-url"
+                type="url"
+                value={apiUrlInput}
+                onChange={(e) => setApiUrlInput(e.target.value)}
+                placeholder="https://affiliate-video-pipeline.onrender.com (หรือลิงก์ Codespaces port 8000)"
+                className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+              />
+              <button
+                type="submit"
+                id="btn-save-api-url"
+                className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-700"
+              >
+                ทดสอบและบันทึก
+              </button>
+            </form>
+          </section>
+        )}
+
         {errorBanner && (
           <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <AlertTriangle className="h-5 w-5 shrink-0 text-red-600" />
@@ -281,15 +413,17 @@ export default function App() {
           </div>
         )}
 
-        {health && !health.ffmpeg_available && health.video_provider === "ffmpeg" && (
-          <div className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
-            <span>
-              ไม่พบคำสั่ง <code>ffmpeg</code> ในเครื่อง กรุณาติดตั้ง FFmpeg ตามคู่มือใน README.md
-              ก่อนกดอนุมัติสร้างวิดีโอ
-            </span>
-          </div>
-        )}
+        {health &&
+          !health.ffmpeg_available &&
+          health.video_provider === "ffmpeg" && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+              <span>
+                ไม่พบคำสั่ง <code>ffmpeg</code> ในเครื่อง กรุณาติดตั้ง FFmpeg
+                ตามคู่มือใน README.md ก่อนกดอนุมัติสร้างวิดีโอ
+              </span>
+            </div>
+          )}
 
         {/* Top KPI Bar */}
         <KpiBar
