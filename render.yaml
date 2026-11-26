@@ -1,0 +1,36 @@
+# Render.com Blueprint (1-Click Cloud Deploy)
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: affiliate-video-pipeline
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      # Start in MOCK_MODE=true so the app boots and works immediately on first deploy.
+      # Switch to MOCK_MODE=false after setting GEMINI_API_KEY, GOOGLE_DRIVE_ROOT_FOLDER_ID,
+      # and GOOGLE_SERVICE_ACCOUNT_JSON in Render Dashboard -> Environment.
+      - key: MOCK_MODE
+        value: "true"
+      - key: VIDEO_PROVIDER
+        value: "ffmpeg"
+      - key: DATABASE_URL
+        value: "sqlite:////tmp/affiliate_data/affiliate_pipeline.db"
+      - key: TMP_OUTPUTS_DIR
+        value: "/tmp/affiliate_data/tmp_outputs"
+      - key: WORKER_MAX_WORKERS
+        value: "1"
+      - key: GEMINI_MODEL
+        value: "gemini-2.5-flash"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_DRIVE_ROOT_FOLDER_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+    # Optional (Starter plan+): uncomment below & point DATABASE_URL/TMP_OUTPUTS_DIR to /data
+    # disk:
+    #   name: affiliate-data
+    #   mountPath: /data
+    #   sizeGB: 1

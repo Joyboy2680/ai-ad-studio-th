@@ -1,0 +1,27 @@
+# Environment & Secrets
+.env
+service_account.json
+*.json.secret
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# SQLite & Local Checkpoints
+*.db
+*.db-journal
+*.sqlite3
+tmp_outputs/
+backend/tmp_outputs/
+backend/*.db
+data/
+
+# Frontend / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*

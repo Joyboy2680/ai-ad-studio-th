@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: affiliate-video-pipeline
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+      DATABASE_URL: "sqlite:////data/affiliate_pipeline.db"
+      TMP_OUTPUTS_DIR: "/data/tmp_outputs"
+    volumes:
+      - ./data:/data
+      # Optional: mount local service_account.json if not using GOOGLE_SERVICE_ACCOUNT_JSON env var
+      # - ./service_account.json:/app/service_account.json:ro

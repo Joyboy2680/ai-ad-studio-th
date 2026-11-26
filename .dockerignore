@@ -1,0 +1,17 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.env
+service_account.json
+*.db
+*.sqlite3
+tmp_outputs
+data
+frontend/node_modules
+frontend/dist
+index.html
+styles.css
+js
