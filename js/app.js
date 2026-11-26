@@ -628,6 +628,13 @@ function renderAllOutputs() {
   renderImagenTab();
   renderCaptionsTab();
   renderTimelineTab();
+
+  const outputShell = document.querySelector('.output-shell');
+  if (outputShell) {
+    outputShell.classList.remove('just-generated');
+    void outputShell.offsetWidth;
+    outputShell.classList.add('just-generated');
+  }
 }
 
 function renderOutputMeta() {
