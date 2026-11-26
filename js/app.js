@@ -775,6 +775,14 @@ function updateCarouselPosition() {
   el.prevSlideBtn.disabled = state.currentSlide <= 0;
   el.nextSlideBtn.disabled = state.currentSlide >= total - 1;
 
+  el.carouselTrack.querySelectorAll('.slide-card').forEach((card, idx) => {
+    card.classList.remove('slide-pulse');
+    if (idx === state.currentSlide) {
+      void card.offsetWidth;
+      card.classList.add('slide-pulse');
+    }
+  });
+
   el.timecodePills.querySelectorAll('.timecode-pill').forEach((pill, idx) => {
     pill.classList.toggle('active', idx === state.currentSlide);
   });
