@@ -726,7 +726,7 @@ body::before {
   padding: 2px 8px;
   border-radius: var(--radius-pill);
   text-decoration: none;
-  max-width: 240px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

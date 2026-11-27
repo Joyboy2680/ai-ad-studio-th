@@ -10,6 +10,7 @@ import {
 } from './presets.js';
 import {
   autoFillFromUrl,
+  fetchProductPreviewFromUrl,
   generateAdStudioPlan,
   analyzeProductAndBuildUgcPrompt,
   buildUgc4GridLocalPrompt,
@@ -44,14 +45,16 @@ const state = {
   flowMode: 'veo3',
   clipStyle: 'fast-hands-on',
   lockCharacter: true,
-  ingredient1: null, // { dataUrl, base64, width, height, sizeKB, name }
+  ingredient1: null, // { dataUrl, base64, width, height, sizeKB, name, fromAutoUrl?, sourcePageUrl? }
   ingredient2: null,
   activeTab: 'slides',
   currentSlide: 0,
   isGenerating: false,
   plan: null,
   ugcImage: null, // { dataUrl, base64, mimeType, modelId }
-  driveHistory: []
+  driveHistory: [],
+  isSamplePreload: false,
+  lastPrefetchedUrl: ''
 };
 
 // DOM References
@@ -269,6 +272,60 @@ function compressImageTo640(file) {
   });
 }
 
+async function compressImageFromUrlTo640(imageUrl) {
+  if (!imageUrl) throw new Error('ไม่มี URL รูปภาพสินค้า');
+
+  const tryFetchBlob = async (targetUrl, timeoutMs = 6000) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(targetUrl, { signal: ctrl.signal, mode: 'cors' });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      if (!blob || !blob.size || (blob.type && !blob.type.startsWith('image/'))) {
+        return null;
+      }
+      return blob;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const candidates = [
+    imageUrl,
+    `https://wsrv.nl/?url=${encodeURIComponent(imageUrl)}&w=640&h=640&fit=inside&output=jpeg&q=85`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(imageUrl)}`
+  ];
+
+  for (const candidateUrl of candidates) {
+    const blob = await tryFetchBlob(candidateUrl);
+    if (blob) {
+      const ext = (blob.type || 'image/jpeg').includes('png') ? 'png' : 'jpg';
+      const file = new File([blob], `product-from-link.${ext}`, {
+        type: blob.type || 'image/jpeg'
+      });
+      return await compressImageTo640(file);
+    }
+  }
+
+  throw new Error('ไม่สามารถโหลดไฟล์รูปภาพข้ามโดเมนจากลิงก์นี้ได้');
+}
+
+async function applyRemoteProductImageToIngredient1(imageUrl, sourcePageUrl = '') {
+  const compressed = await compressImageFromUrlTo640(imageUrl);
+  compressed.fromAutoUrl = true;
+  compressed.sourcePageUrl = sourcePageUrl;
+  compressed.sourceImageUrl = imageUrl;
+
+  state.ingredient1 = compressed;
+  el.ingredient1Img.src = compressed.dataUrl;
+  el.ingredient1Badge.textContent = `${compressed.width}×${compressed.height}px • ${compressed.sizeKB} KB`;
+  el.ingredient1Slot.classList.add('has-image');
+  return compressed;
+}
+
 function setupIngredientSlot(slotNum) {
   const key = `ingredient${slotNum}`;
   const slotEl = el[`${key}Slot`];
@@ -413,10 +470,78 @@ function loadSampleProduct(sampleKey, silent = false) {
   el.productVisualInput.value = sample.visualDetails;
   el.characterAnchorInput.value = sample.characterAnchor;
   el.groundingSources.innerHTML = '';
+  state.isSamplePreload = true;
+  state.lastPrefetchedUrl = '';
+
+  if (state.ingredient1?.fromAutoUrl) {
+    state.ingredient1 = null;
+    el.ingredient1Img.src = '';
+    el.ingredient1Slot.classList.remove('has-image');
+  }
 
   if (!silent) {
     showToast(`โหลดข้อมูลตัวอย่าง "${sample.name}" แล้ว`, 'info');
   }
+}
+
+async function prefetchProductFromUrlOnPaste(rawUrl, options = {}) {
+  const { silentNoKey = false } = options;
+  const url = (rawUrl || '').trim();
+  if (!url || !/(https?:\/\/|[a-z0-9-]+\.[a-z]{2,})/i.test(url)) return null;
+  if (url === state.lastPrefetchedUrl && state.ingredient1?.sourcePageUrl === url) {
+    return null;
+  }
+  state.lastPrefetchedUrl = url;
+
+  el.groundingSources.innerHTML =
+    '<span class="grounding-chip">⏳ กำลังดึงรูปสินค้า &amp; ข้อมูลจากลิงก์...</span>';
+
+  const preview = await fetchProductPreviewFromUrl(url);
+
+  const canOverwriteSample = state.isSamplePreload;
+  if (preview.title && (canOverwriteSample || !el.productNameInput.value.trim())) {
+    el.productNameInput.value = preview.title;
+    state.isSamplePreload = false;
+  }
+  if (preview.description && (canOverwriteSample || !el.productBenefitsInput.value.trim())) {
+    el.productBenefitsInput.value = preview.description;
+    state.isSamplePreload = false;
+  }
+
+  let loadedIng = null;
+  if (preview.imageUrl && (!state.ingredient1 || state.ingredient1.fromAutoUrl)) {
+    try {
+      loadedIng = await applyRemoteProductImageToIngredient1(preview.imageUrl, url);
+    } catch {
+      loadedIng = null;
+    }
+  }
+
+  if (loadedIng) {
+    el.groundingSources.innerHTML = `<span class="grounding-chip">✓ ดึงรูปสินค้าลง Ingredient 1 แล้ว (${loadedIng.width}×${loadedIng.height}px)</span>`;
+    if (!silentNoKey) {
+      showToast(
+        `ดึงรูปสินค้าจากลิงก์ลง Ingredient 1 สำเร็จ! (${loadedIng.width}×${loadedIng.height}px)`,
+        'success'
+      );
+    }
+  } else if (preview.blockedReason) {
+    el.groundingSources.innerHTML = `<span class="sample-label" style="color:#fde047;">⚠️ ${escapeHtml(preview.blockedReason)} — ลากรูปมาวางใน Ingredient 1 ได้เลย</span>`;
+    if (!silentNoKey) {
+      showToast(`${preview.blockedReason} (สามารถลากรูปสินค้ามาวางใน Ingredient 1 เองได้)`, 'warn');
+    }
+  } else if (preview.title) {
+    el.groundingSources.innerHTML = `<span class="grounding-chip">✓ ดึงชื่อสินค้าจากลิงก์แล้ว (ไม่พบไฟล์รูป — ลากรูปใส่ Ingredient 1 เพิ่มได้)</span>`;
+  } else {
+    el.groundingSources.innerHTML =
+      '<span class="sample-label" style="color:var(--text-muted);">ลิงก์นี้ไม่ส่งรูปภาพเปิดเผย (og:image) — ลากรูปสินค้ามาวางใน Ingredient 1 เองได้</span>';
+  }
+
+  if (typeof rebuildUgcPromptFromInputs === 'function') {
+    rebuildUgcPromptFromInputs();
+  }
+
+  return { preview, loadedIng };
 }
 
 async function handleAutoFill() {
@@ -430,22 +555,41 @@ async function handleAutoFill() {
 
   const apiKey = state.apiKey.trim();
   if (!apiKey) {
-    // Helpful smart fallback for users testing without an API key
+    // Still fetch image + OpenGraph title/desc from pasted URL even without a Gemini API key!
     if (url) {
+      const origHtml = el.autoFillBtn.innerHTML;
+      el.autoFillBtn.disabled = true;
+      el.autoFillBtn.innerHTML =
+        '<svg class="spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> กำลังดึงลิงก์...';
       try {
-        const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
-        const slug = decodeURIComponent(parsedUrl.pathname)
-          .replace(/[-_/]+/g, ' ')
-          .trim();
-        if (slug && slug.length > 3) {
-          el.productNameInput.value = slug
-            .split(' ')
-            .slice(0, 6)
-            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ');
+        const fetched = await prefetchProductFromUrlOnPaste(url, { silentNoKey: true });
+        if (!fetched?.preview?.title) {
+          try {
+            const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
+            const slug = decodeURIComponent(parsedUrl.pathname)
+              .replace(/[-_/]+/g, ' ')
+              .trim();
+            if (slug && slug.length > 3) {
+              el.productNameInput.value = slug
+                .split(' ')
+                .slice(0, 6)
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(' ');
+            }
+          } catch {
+            // ignore URL parse error
+          }
         }
-      } catch {
-        // ignore URL parse error
+        if (fetched?.loadedIng) {
+          showToast(
+            'ดึงรูปสินค้าเข้า Ingredient 1 แล้ว! (ใส่ Gemini API Key ด้านบนเพื่อวิเคราะห์สรรพคุณด้วย AI)',
+            'success'
+          );
+          return;
+        }
+      } finally {
+        el.autoFillBtn.disabled = false;
+        el.autoFillBtn.innerHTML = origHtml;
       }
     }
     showToast(
@@ -463,10 +607,33 @@ async function handleAutoFill() {
   el.groundingSources.innerHTML = '';
 
   try {
-    const result = await autoFillFromUrl(apiKey, url, {
+    const previewPromise = url ? fetchProductPreviewFromUrl(url) : Promise.resolve(null);
+    const geminiPromise = autoFillFromUrl(apiKey, url, {
       preferredModel: state.preferredModel,
       ingredient1: state.ingredient1
     });
+
+    const [geminiSettled, previewSettled] = await Promise.allSettled([
+      geminiPromise,
+      previewPromise
+    ]);
+
+    const preview = previewSettled.status === 'fulfilled' ? previewSettled.value : null;
+
+    if (geminiSettled.status !== 'fulfilled') {
+      // Even if Gemini failed, still try applying the fetched product image from URL!
+      if (preview?.imageUrl && (!state.ingredient1 || state.ingredient1.fromAutoUrl)) {
+        try {
+          await applyRemoteProductImageToIngredient1(preview.imageUrl, url);
+        } catch {
+          // ignore
+        }
+      }
+      throw geminiSettled.reason;
+    }
+
+    const result = geminiSettled.value;
+    state.isSamplePreload = false;
     if (result.productName) el.productNameInput.value = result.productName;
     if (result.benefits) el.productBenefitsInput.value = result.benefits;
     if (result.pricePromo) el.productPromoInput.value = result.pricePromo;
@@ -474,14 +641,33 @@ async function handleAutoFill() {
     if (result.visualDetails) el.productVisualInput.value = result.visualDetails;
     if (result.characterAnchor) el.characterAnchorInput.value = result.characterAnchor;
 
+    // Try loading product image from Gemini productImageUrl or OpenGraph preview into Ingredient 1
+    let ingLoaded = null;
+    const imgCandidates = [result.productImageUrl, preview?.imageUrl].filter(Boolean);
+    if (imgCandidates.length && (!state.ingredient1 || state.ingredient1.fromAutoUrl || state.ingredient1.sourcePageUrl !== url)) {
+      for (const candidateImg of imgCandidates) {
+        try {
+          ingLoaded = await applyRemoteProductImageToIngredient1(candidateImg, url);
+          break;
+        } catch {
+          // try next image candidate
+        }
+      }
+    }
+
     const noteBadge = result.note
       ? `<span class="sample-label" style="color:#fde047;">หมายเหตุ: ${escapeHtml(result.note)}</span>`
+      : '';
+
+    const ingBadgeHtml = ingLoaded
+      ? `<span class="grounding-chip">✓ ดึงรูปลง Ingredient 1 (${ingLoaded.width}×${ingLoaded.height}px)</span>`
       : '';
 
     const modeBadge = `<span class="grounding-chip">${escapeHtml(result.modelId)} • ${escapeHtml(result.strategyName || 'Auto-Fill')}</span>`;
 
     el.groundingSources.innerHTML =
       modeBadge +
+      ingBadgeHtml +
       (result.sources?.length
         ? result.sources
             .slice(0, 3)
@@ -493,8 +679,14 @@ async function handleAutoFill() {
         : '') +
       noteBadge;
 
+    if (typeof rebuildUgcPromptFromInputs === 'function') {
+      rebuildUgcPromptFromInputs();
+    }
+
     showToast(
-      `AI Auto-Fill สำเร็จด้วย ${result.modelId} (${result.strategyName})!`,
+      ingLoaded
+        ? `AI Auto-Fill + ดึงรูปลง Ingredient 1 สำเร็จด้วย ${result.modelId}!`
+        : `AI Auto-Fill สำเร็จด้วย ${result.modelId} (${result.strategyName})!`,
       'success'
     );
   } catch (err) {
@@ -1743,6 +1935,30 @@ function init() {
     a.remove();
     URL.revokeObjectURL(url);
     showToast('ดาวน์โหลดไฟล์ .txt เรียบร้อยแล้ว', 'success');
+  });
+
+  // Auto-prefetch product image + metadata when pasting a link into URL box
+  el.productUrlInput.addEventListener('paste', () => {
+    setTimeout(() => {
+      const pastedUrl = el.productUrlInput.value.trim();
+      if (pastedUrl) {
+        prefetchProductFromUrlOnPaste(pastedUrl);
+      }
+    }, 50);
+  });
+
+  el.productUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAutoFill();
+    }
+  });
+
+  el.productNameInput.addEventListener('input', () => {
+    state.isSamplePreload = false;
+  });
+  el.productBenefitsInput.addEventListener('input', () => {
+    state.isSamplePreload = false;
   });
 
   // Pre-load rich default sample so workspace looks immediately alive & testable

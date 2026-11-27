@@ -227,6 +227,7 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
   "audience": "กลุ่มเป้าหมายหลักในไทย",
   "visualDetails": "รายละเอียดลักษณะสินค้า สี บรรจุภัณฑ์ และพร็อพที่เหมาะถ่ายทำ (ภาษาไทยหรืออังกฤษ)",
   "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow",
+  "productImageUrl": "URL รูปภาพสินค้าโดยตรง (https://... .jpg/.png/.webp) ถ้าพบจากหน้าเว็บหรือผลการค้นหา มิฉะนั้นใส่ค่าว่าง",
   "note": "หมายเหตุสั้นๆ หากเป็นลิงก์ย่อที่ติดหน้าล็อกอินหรือไม่ได้ใช้ Search Grounding"
 }`;
 
@@ -309,6 +310,7 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
         audience: parsed.audience || '',
         visualDetails: parsed.visualDetails || '',
         characterAnchor: parsed.characterAnchor || '',
+        productImageUrl: parsed.productImageUrl || '',
         note: parsed.note || '',
         sources: result.sources,
         modelId: result.model.id,
@@ -326,6 +328,248 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
   }
 
   throw lastErr || new Error('Auto-Fill ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+}
+
+function normalizeHttpUrl(rawUrl) {
+  const trimmed = (rawUrl || '').trim();
+  if (!trimmed) return '';
+  const withProto = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(withProto);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function resolveMaybeRelativeUrl(candidate, baseUrl) {
+  if (!candidate || typeof candidate !== 'string') return '';
+  const clean = candidate.trim();
+  if (!clean || clean.startsWith('data:')) return '';
+  try {
+    return new URL(clean, baseUrl).toString();
+  } catch {
+    return '';
+  }
+}
+
+function isLikelyBlockedOrLogo(imageUrl, title = '') {
+  const lowerImg = (imageUrl || '').toLowerCase();
+  const lowerTitle = (title || '').toLowerCase();
+  const blockedTitleTerms = [
+    'captcha',
+    'verify you are human',
+    'access denied',
+    'just a moment',
+    'attention required',
+    'robot check',
+    'login',
+    'เข้าสู่ระบบ'
+  ];
+  if (blockedTitleTerms.some((t) => lowerTitle.includes(t))) {
+    return { blocked: true, reason: 'ร้านค้าติดหน้ายืนยันตัวตน/ล็อกอิน จึงดึงภาพอัตโนมัติไม่ได้' };
+  }
+  if (!lowerImg) return { blocked: false, rejectImage: false };
+  if (
+    lowerImg.endsWith('.svg') ||
+    lowerImg.includes('favicon') ||
+    lowerImg.includes('captcha') ||
+    lowerImg.includes('sprite') ||
+    /\/logo[-_.]/.test(lowerImg)
+  ) {
+    return { blocked: false, rejectImage: true };
+  }
+  return { blocked: false, rejectImage: false };
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs = 5500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchTextWithTimeout(url, timeoutMs = 5500) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) return '';
+    return await res.text();
+  } catch {
+    return '';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseOpenGraphFromHtml(html, baseUrl) {
+  if (!html || typeof DOMParser === 'undefined') return null;
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const getMeta = (selectors) => {
+      for (const sel of selectors) {
+        const node = doc.querySelector(sel);
+        const content = node?.getAttribute('content') || node?.getAttribute('href') || '';
+        if (content.trim()) return content.trim();
+      }
+      return '';
+    };
+
+    const title =
+      getMeta(['meta[property="og:title"]', 'meta[name="twitter:title"]']) ||
+      (doc.title || '').trim();
+    const description = getMeta([
+      'meta[property="og:description"]',
+      'meta[name="twitter:description"]',
+      'meta[name="description"]'
+    ]);
+    let imageUrl = resolveMaybeRelativeUrl(
+      getMeta([
+        'meta[property="og:image:secure_url"]',
+        'meta[property="og:image"]',
+        'meta[name="twitter:image"]',
+        'link[rel="image_src"]'
+      ]),
+      baseUrl
+    );
+
+    if (!imageUrl) {
+      const ldScripts = Array.from(doc.querySelectorAll('script[type="application/ld+json"]'));
+      for (const sc of ldScripts) {
+        try {
+          const json = JSON.parse(sc.textContent || '{}');
+          const imgField = Array.isArray(json.image) ? json.image[0] : json.image;
+          const rawImg = typeof imgField === 'string' ? imgField : imgField?.url || '';
+          const resolved = resolveMaybeRelativeUrl(rawImg, baseUrl);
+          if (resolved) {
+            imageUrl = resolved;
+            break;
+          }
+        } catch {
+          // ignore invalid JSON-LD
+        }
+      }
+    }
+
+    return { title, description, imageUrl };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetches OpenGraph metadata + product image URL from a pasted link (client-side CORS-friendly).
+ */
+export async function fetchProductPreviewFromUrl(rawUrl) {
+  const normalizedUrl = normalizeHttpUrl(rawUrl);
+  if (!normalizedUrl) {
+    return { imageUrl: '', title: '', description: '', finalUrl: '', blockedReason: '', source: '' };
+  }
+
+  // Direct image link pasted
+  if (/\.(png|jpe?g|webp|avif)(\?|#|$)/i.test(normalizedUrl)) {
+    return {
+      imageUrl: normalizedUrl,
+      title: '',
+      description: '',
+      finalUrl: normalizedUrl,
+      blockedReason: '',
+      source: 'direct-image'
+    };
+  }
+
+  let bestTitle = '';
+  let bestDesc = '';
+  let bestImg = '';
+  let finalUrl = normalizedUrl;
+  let blockedReason = '';
+  let source = '';
+
+  // 1) Microlink API (free, CORS-enabled, resolves redirects & og:image)
+  const micro = await fetchJsonWithTimeout(
+    `https://api.microlink.io/?url=${encodeURIComponent(normalizedUrl)}`,
+    6000
+  );
+  if (micro?.status === 'success' && micro?.data) {
+    const candidateTitle = (micro.data.title || '').trim();
+    const candidateImg = resolveMaybeRelativeUrl(micro.data.image?.url || '', normalizedUrl);
+    const check = isLikelyBlockedOrLogo(candidateImg, candidateTitle);
+    if (check.blocked) {
+      blockedReason = check.reason;
+    } else {
+      bestTitle = candidateTitle;
+      bestDesc = (micro.data.description || '').trim();
+      finalUrl = micro.data.url || normalizedUrl;
+      if (candidateImg && !check.rejectImage) {
+        bestImg = candidateImg;
+        source = 'microlink';
+      }
+    }
+  }
+
+  // 2) JSONLink fallback if image still empty
+  if (!bestImg && !blockedReason) {
+    const jlink = await fetchJsonWithTimeout(
+      `https://jsonlink.io/api/extract?url=${encodeURIComponent(normalizedUrl)}`,
+      5000
+    );
+    if (jlink) {
+      const candidateTitle = (jlink.title || '').trim();
+      const firstImg = Array.isArray(jlink.images) ? jlink.images[0] : '';
+      const candidateImg = resolveMaybeRelativeUrl(firstImg, normalizedUrl);
+      const check = isLikelyBlockedOrLogo(candidateImg, candidateTitle);
+      if (check.blocked) {
+        blockedReason = check.reason;
+      } else {
+        if (!bestTitle && candidateTitle) bestTitle = candidateTitle;
+        if (!bestDesc && jlink.description) bestDesc = String(jlink.description).trim();
+        if (candidateImg && !check.rejectImage) {
+          bestImg = candidateImg;
+          source = 'jsonlink';
+        }
+      }
+    }
+  }
+
+  // 3) OpenGraph HTML fallback via CORS-friendly raw proxy
+  if (!bestImg && !blockedReason) {
+    const html = await fetchTextWithTimeout(
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedUrl)}`,
+      5500
+    );
+    const og = parseOpenGraphFromHtml(html, normalizedUrl);
+    if (og) {
+      const check = isLikelyBlockedOrLogo(og.imageUrl, og.title);
+      if (check.blocked) {
+        blockedReason = check.reason;
+      } else {
+        if (!bestTitle && og.title) bestTitle = og.title;
+        if (!bestDesc && og.description) bestDesc = og.description;
+        if (og.imageUrl && !check.rejectImage) {
+          bestImg = og.imageUrl;
+          source = 'opengraph';
+        }
+      }
+    }
+  }
+
+  return {
+    imageUrl: bestImg,
+    title: bestTitle,
+    description: bestDesc,
+    finalUrl,
+    blockedReason,
+    source
+  };
 }
 
 /**
