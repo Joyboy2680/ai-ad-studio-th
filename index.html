@@ -117,10 +117,107 @@
           </a>
         </div>
       </div>
+
+      <!-- Modular Studio Menu Bar (Quick Navigation & Add-on Slots) -->
+      <nav class="studio-menubar" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
+        <div class="menubar-inner">
+          <div class="menubar-group">
+            <button type="button" class="menu-pill active" data-menu-tab="slides">
+              <span>🎬 สตูดิโอคลิป 10 วิ</span>
+            </button>
+            <button type="button" class="menu-pill" data-menu-tab="ugc-grid">
+              <span>🖼️ ภาพ UGC 4 ช่อง</span>
+              <span class="menu-badge mint">1:1</span>
+            </button>
+            <button type="button" class="menu-pill" data-menu-tab="imagen">
+              <span>📸 ภาพนิ่ง Imagen</span>
+            </button>
+            <button type="button" class="menu-pill" data-menu-tab="captions">
+              <span>💬 แคปชั่น &amp; #</span>
+            </button>
+            <button type="button" class="menu-pill" data-menu-action="toggle-sheet">
+              <span>📊 Google Sheet Log</span>
+            </button>
+            <a class="menu-pill" href="./pipeline/" title="เปิดแดชบอร์ด Affiliate Pipeline">
+              <span>⚡ Pipeline</span>
+              <span class="menu-badge blue">Pro</span>
+            </a>
+          </div>
+
+          <div class="menubar-group menubar-addons">
+            <div id="customMenuSlots" class="custom-menu-slots"></div>
+            <button type="button" class="menu-pill menu-pill-addon" data-menu-action="toggle-addons" data-addon-tab="hooks">
+              <span>🎣 คลัง Hook ไวรัล</span>
+            </button>
+            <button type="button" class="menu-pill menu-pill-addon" data-menu-action="toggle-addons" data-addon-tab="roi">
+              <span>💰 คำนวณ ROI</span>
+            </button>
+            <button type="button" id="openAddonsHubBtn" class="menu-pill menu-pill-accent">
+              <span>✨ ฟังก์ชันเสริม +</span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </header>
 
     <!-- Main 12-Column (5:7) Studio Layout -->
     <main class="studio-main">
+      <!-- Expandable Modular Add-ons & Tools Drawer -->
+      <section id="addonsDrawerPanel" class="glass-card addons-drawer hidden" aria-label="ศูนย์รวมฟังก์ชันเสริม">
+        <div class="addons-drawer-top">
+          <div class="addons-tabs">
+            <button type="button" class="tab-btn active" data-addon-panel="hooks">🎣 คลัง Hook &amp; CTA 3 วิ</button>
+            <button type="button" class="tab-btn" data-addon-panel="roi">💰 คำนวณค่าคอม &amp; ROI</button>
+            <button type="button" class="tab-btn" data-addon-panel="custom">🔌 เพิ่มปุ่มเมนูฟังก์ชันเสริมเอง</button>
+          </div>
+          <button type="button" id="closeAddonsHubBtn" class="btn-secondary-sm">✕ ปิด</button>
+        </div>
+
+        <div id="addonPanel-hooks" class="addon-subpanel active">
+          <div id="addonHooksGrid" class="addon-hooks-grid"></div>
+        </div>
+
+        <div id="addonPanel-roi" class="addon-subpanel">
+          <div class="addon-roi-grid">
+            <div class="field-group">
+              <label class="field-label" for="roiPriceInput">ราคาสินค้า (บาท)</label>
+              <input type="number" id="roiPriceInput" class="field-input mono" value="390" min="0" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="roiRateInput">ค่าคอมมิชชั่น (%)</label>
+              <input type="number" id="roiRateInput" class="field-input mono" value="12" min="0" max="100" step="0.5" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="roiOrdersInput">เป้าหมายออเดอร์ / วัน</label>
+              <input type="number" id="roiOrdersInput" class="field-input mono" value="15" min="0" />
+            </div>
+            <div class="addon-roi-results">
+              <div class="roi-stat">
+                <span class="field-hint">ค่าคอมต่อชิ้น</span>
+                <strong id="roiPerOrderOut">฿47 / ชิ้น</strong>
+              </div>
+              <div class="roi-stat">
+                <span class="field-hint">รายได้ต่อวัน</span>
+                <strong id="roiDailyOut">฿702 / วัน</strong>
+              </div>
+              <div class="roi-stat highlight">
+                <span class="field-hint">ประมาณการ / เดือน</span>
+                <strong id="roiMonthlyOut">฿21,060 / เดือน</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="addonPanel-custom" class="addon-subpanel">
+          <div class="addon-custom-form">
+            <input type="text" id="customAddonNameInput" class="field-input" placeholder="ชื่อปุ่มเมนู (เช่น CapCut, Trends, Seller)" />
+            <input type="url" id="customAddonUrlInput" class="field-input mono" placeholder="https://..." />
+            <button type="button" id="customAddonAddBtn" class="btn-ugc-primary">+ เพิ่มบนแถบเมนู</button>
+          </div>
+          <div id="customAddonManageList" class="drive-history-list" style="margin-top:10px;"></div>
+        </div>
+      </section>
+
       <div class="studio-grid">
         <!-- ================================================================
              LEFT PANEL (5 Columns): Inputs, Ingredients, Lock, Flow & Styles

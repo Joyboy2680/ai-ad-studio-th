@@ -32,6 +32,7 @@ import {
   STORAGE_SHEET_HISTORY
 } from './drive.js';
 import { renderUgc4GridCanvas } from './ugc-canvas.js';
+import { initMenuBarAndAddons } from './addons.js';
 
 const STORAGE_API_KEY = 'ai_ad_studio_th_gemini_api_key';
 const MAX_IMAGE_DIM = 640;
@@ -2162,6 +2163,21 @@ function init() {
   initSlideVideoStudio();
   initUgcGridStudio();
   initGoogleSheetLogger();
+  initMenuBarAndAddons({
+    onSwitchTab: switchTab,
+    onOpenSheetDrawer: () => {
+      el.sheetConfigDrawer?.classList.remove('hidden');
+      document
+        .querySelector('.output-header')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    },
+    onApplyHookText: (hookText) => {
+      state.isSamplePreload = false;
+      const cur = el.productBenefitsInput?.value.trim() || '';
+      el.productBenefitsInput.value = cur ? `${hookText}\n${cur}` : hookText;
+    },
+    onShowToast: showToast
+  });
 }
 
 function launchSlideGeminiWithPromptSync(promptText, bannerTitle, toastMessage) {
