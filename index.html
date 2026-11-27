@@ -34,134 +34,281 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <!-- Top Studio Header -->
-    <header class="studio-header">
-      <div class="header-inner">
-        <div class="brand-group">
-          <div class="brand-mark" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 7.5C4 5.567 5.567 4 7.5 4h9C18.433 4 20 5.567 20 7.5v9c0 1.933-1.567 3.5-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5v-9Z"
-                stroke="url(#brandG)"
-                stroke-width="1.8"
-              />
-              <path d="M10 8.8 15.6 12 10 15.2V8.8Z" fill="url(#brandG)" />
-              <defs>
-                <linearGradient id="brandG" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#4285F4" />
-                  <stop offset="0.34" stop-color="#EA4335" />
-                  <stop offset="0.67" stop-color="#FBBC05" />
-                  <stop offset="1" stop-color="#34A853" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div class="brand-text">
-            <h1>
-              AI Ad Studio TH
-              <span class="edition-tag">Google Flow Edition</span>
-            </h1>
-            <p class="brand-subtitle">
-              สร้างพรอมภาพนิ่ง Imagen &amp; คลิปขายของ 10 วิ สำหรับ Veo 3 / Veo 2 / Scenebuilder
-            </p>
-          </div>
-        </div>
-
-        <div class="header-actions">
-          <div class="command-toolbar">
-            <div class="api-key-widget" title="บันทึกเฉพาะในเบราว์เซอร์ของคุณ (localStorage)">
-              <span class="api-status-dot" id="apiStatusDot" aria-hidden="true"></span>
-              <input
-                type="password"
-                id="apiKeyInput"
-                class="api-key-input"
-                placeholder="ใส่ Gemini API Key (หรือใช้ Demo)"
-                autocomplete="off"
-                aria-label="Gemini API Key"
-              />
-              <button
-                type="button"
-                id="toggleApiKeyBtn"
-                class="icon-btn-mini"
-                title="แสดง/ซ่อน API Key"
-                aria-label="แสดงหรือซ่อน API Key"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-                  <circle cx="12" cy="12" r="3" />
-                </svg>
-              </button>
+    <div class="app-shell">
+      <!-- Vertical Left Navigation Sidebar -->
+      <aside class="studio-sidebar" id="studioSidebar" aria-label="เมนูนำทางหลักและตั้งค่า">
+        <div class="sidebar-brand">
+          <div class="brand-group">
+            <div class="brand-mark" aria-hidden="true">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M4 7.5C4 5.567 5.567 4 7.5 4h9C18.433 4 20 5.567 20 7.5v9c0 1.933-1.567 3.5-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5v-9Z"
+                  stroke="url(#brandG)"
+                  stroke-width="1.8"
+                />
+                <path d="M10 8.8 15.6 12 10 15.2V8.8Z" fill="url(#brandG)" />
+                <defs>
+                  <linearGradient id="brandG" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4285F4" />
+                    <stop offset="0.34" stop-color="#EA4335" />
+                    <stop offset="0.67" stop-color="#FBBC05" />
+                    <stop offset="1" stop-color="#34A853" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
-            <span class="toolbar-divider" aria-hidden="true"></span>
-            <select
-              id="modelSelect"
-              class="model-select-pill"
-              aria-label="เลือกโมเดล Gemini"
-              title="ใช้ 3.5 Flash-Lite & 3.1 Flash-Lite (500/วัน) เป็นหลัก พร้อมสลับอัตโนมัติเมื่อเจอ 429"
-            >
-              <option value="auto" selected>Auto (3.5 Lite → 3.1 Lite)</option>
-              <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (500/วัน)</option>
-              <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (500/วัน)</option>
-              <option value="gemini-3.8-flash">gemini-3.8-flash</option>
-              <option value="gemini-3.6-flash">gemini-3.6-flash</option>
-              <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
-            </select>
+            <div class="brand-text">
+              <div class="sidebar-title">AI Ad Studio TH</div>
+              <span class="edition-tag">Google Flow Edition</span>
+            </div>
           </div>
-          <a
-            class="api-help-link"
-            href="https://aistudio.google.com/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            รับ Gemini Key ↗
-          </a>
+          <button type="button" id="sidebarCloseBtn" class="icon-btn-mini mobile-only-btn" aria-label="ปิดเมนู">✕</button>
         </div>
-      </div>
 
-      <!-- Modular Studio Menu Bar (Quick Navigation & Add-on Slots) -->
-      <nav class="studio-menubar" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
-        <div class="menubar-inner">
-          <div class="menubar-group">
-            <button type="button" class="menu-pill active" data-menu-tab="slides">
-              <span>🎬 สตูดิโอคลิป 10 วิ</span>
+        <nav class="sidebar-nav" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
+          <div class="sidebar-section-label">สตูดิโอหลัก</div>
+          <div class="sidebar-group">
+            <button type="button" class="side-nav-item active" data-menu-tab="slides">
+              <span class="side-nav-icon">🎬</span>
+              <span class="side-nav-label">สตูดิโอคลิป 10 วิ</span>
             </button>
-            <button type="button" class="menu-pill" data-menu-tab="ugc-grid">
-              <span>🖼️ ภาพ UGC 4 ช่อง</span>
+            <button type="button" class="side-nav-item" data-menu-tab="ugc-grid">
+              <span class="side-nav-icon">🖼️</span>
+              <span class="side-nav-label">ภาพ UGC 4 ช่อง</span>
               <span class="menu-badge mint">1:1</span>
             </button>
-            <button type="button" class="menu-pill" data-menu-tab="imagen">
-              <span>📸 ภาพนิ่ง Imagen</span>
+            <button type="button" class="side-nav-item" data-menu-tab="imagen">
+              <span class="side-nav-icon">📸</span>
+              <span class="side-nav-label">ภาพนิ่ง Imagen</span>
             </button>
-            <button type="button" class="menu-pill" data-menu-tab="captions">
-              <span>💬 แคปชั่น &amp; #</span>
+            <button type="button" class="side-nav-item" data-menu-tab="captions">
+              <span class="side-nav-icon">💬</span>
+              <span class="side-nav-label">แคปชั่น &amp; #</span>
             </button>
-            <button type="button" class="menu-pill" data-menu-action="toggle-sheet">
-              <span>📊 Google Sheet Log</span>
+            <button type="button" class="side-nav-item" data-menu-action="toggle-sheet">
+              <span class="side-nav-icon">📊</span>
+              <span class="side-nav-label">Google Sheet Log</span>
             </button>
-            <a class="menu-pill" href="./pipeline/" title="เปิดแดชบอร์ด Affiliate Pipeline">
-              <span>⚡ Pipeline</span>
+            <a class="side-nav-item" href="./pipeline/" title="เปิดแดชบอร์ด Affiliate Pipeline">
+              <span class="side-nav-icon">⚡</span>
+              <span class="side-nav-label">Pipeline</span>
               <span class="menu-badge blue">Pro</span>
             </a>
           </div>
 
-          <div class="menubar-group menubar-addons">
-            <div id="customMenuSlots" class="custom-menu-slots"></div>
-            <button type="button" class="menu-pill menu-pill-addon" data-menu-action="toggle-addons" data-addon-tab="hooks">
-              <span>🎣 คลัง Hook ไวรัล</span>
+          <div class="sidebar-section-label">ฟังก์ชันเสริม &amp; ส่วนขยาย</div>
+          <div class="sidebar-group">
+            <button type="button" class="side-nav-item" data-menu-action="toggle-addons" data-addon-tab="hooks">
+              <span class="side-nav-icon">🎣</span>
+              <span class="side-nav-label">คลัง Hook ไวรัล</span>
             </button>
-            <button type="button" class="menu-pill menu-pill-addon" data-menu-action="toggle-addons" data-addon-tab="roi">
-              <span>💰 คำนวณ ROI</span>
+            <button type="button" class="side-nav-item" data-menu-action="toggle-addons" data-addon-tab="roi">
+              <span class="side-nav-icon">💰</span>
+              <span class="side-nav-label">คำนวณ ROI</span>
             </button>
-            <button type="button" id="openAddonsHubBtn" class="menu-pill menu-pill-accent">
-              <span>✨ ฟังก์ชันเสริม +</span>
+            <div id="customMenuSlots" class="custom-menu-slots vertical"></div>
+            <button type="button" id="openAddonsHubBtn" class="side-nav-item side-nav-accent">
+              <span class="side-nav-icon">✨</span>
+              <span class="side-nav-label">เพิ่มฟังก์ชันเสริม +</span>
             </button>
           </div>
-        </div>
-      </nav>
-    </header>
 
-    <!-- Main 12-Column (5:7) Studio Layout -->
-    <main class="studio-main">
+          <div class="sidebar-section-label">ระบบและการตั้งค่า</div>
+          <div class="sidebar-group">
+            <button type="button" id="openSettingsPanelBtn" class="side-nav-item side-nav-settings" data-menu-action="toggle-settings">
+              <span class="side-nav-icon">⚙️</span>
+              <span class="side-nav-label">ตั้งค่า &amp; เชื่อมต่อ</span>
+            </button>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-status-box">
+            <span class="api-status-dot" id="sidebarStatusDot" aria-hidden="true"></span>
+            <div class="sidebar-status-meta">
+              <strong id="sidebarStatusTitle">Demo Mode พร้อมใช้</strong>
+              <small id="sidebarStatusSub">ใส่ Gemini Key เพื่อใช้ AI จริง</small>
+            </div>
+          </div>
+          <a
+            class="api-help-link sidebar-key-link"
+            href="https://aistudio.google.com/apikey"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            รับ Gemini Key ฟรี ↗
+          </a>
+        </div>
+      </aside>
+
+      <div id="sidebarBackdrop" class="sidebar-backdrop hidden"></div>
+
+      <!-- Main Right Workspace -->
+      <div class="studio-workspace">
+        <!-- Compact Workspace Top Header -->
+        <header class="studio-header">
+          <div class="header-inner">
+            <div class="brand-group">
+              <button type="button" id="mobileSidebarToggle" class="btn-secondary-sm mobile-only-btn" aria-label="เปิดแถบเมนู">
+                ☰ เมนู
+              </button>
+              <div class="brand-text">
+                <h1>
+                  AI Ad Studio TH
+                  <span class="edition-tag">10s Flow + UGC</span>
+                </h1>
+                <p class="brand-subtitle">
+                  สร้างพรอมภาพนิ่ง Imagen &amp; คลิปขายของ 10 วิ • เชื่อม Gemini / Drive / Sheet
+                </p>
+              </div>
+            </div>
+
+            <div class="header-actions">
+              <div class="command-toolbar">
+                <div class="api-key-widget" title="บันทึกเฉพาะในเบราว์เซอร์ของคุณ (localStorage)">
+                  <span class="api-status-dot" id="apiStatusDot" aria-hidden="true"></span>
+                  <input
+                    type="password"
+                    id="apiKeyInput"
+                    class="api-key-input"
+                    placeholder="ใส่ Gemini API Key (หรือใช้ Demo)"
+                    autocomplete="off"
+                    aria-label="Gemini API Key"
+                  />
+                  <button
+                    type="button"
+                    id="toggleApiKeyBtn"
+                    class="icon-btn-mini"
+                    title="แสดง/ซ่อน API Key"
+                    aria-label="แสดงหรือซ่อน API Key"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </button>
+                </div>
+                <span class="toolbar-divider" aria-hidden="true"></span>
+                <select
+                  id="modelSelect"
+                  class="model-select-pill"
+                  aria-label="เลือกโมเดล Gemini"
+                  title="ใช้ 3.5 Flash-Lite & 3.1 Flash-Lite (500/วัน) เป็นหลัก พร้อมสลับอัตโนมัติเมื่อเจอ 429"
+                >
+                  <option value="auto" selected>Auto (3.5 Lite → 3.1 Lite)</option>
+                  <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (500/วัน)</option>
+                  <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (500/วัน)</option>
+                  <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+                  <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+                  <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
+                </select>
+              </div>
+              <button type="button" id="topbarSettingsBtn" class="api-help-link" title="ตั้งค่าการเชื่อมต่อและ UI">
+                ⚙️ ตั้งค่า
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Main 12-Column (5:7) Studio Layout -->
+        <main class="studio-main">
+          <!-- Unified Studio Settings Drawer Panel -->
+          <section id="settingsPanelCard" class="glass-card settings-panel hidden" aria-label="ตั้งค่าสตูดิโอและการเชื่อมต่อ">
+            <div class="addons-drawer-top">
+              <div class="section-title">
+                <span class="step-badge step-blue">⚙️</span>
+                <span>ตั้งค่าสตูดิโอ &amp; การเชื่อมต่อทั้งหมด</span>
+              </div>
+              <button type="button" id="closeSettingsPanelBtn" class="btn-secondary-sm">✕ ปิดตั้งค่า</button>
+            </div>
+
+            <div class="settings-grid-3">
+              <!-- Settings Col 1: Gemini AI -->
+              <div class="settings-box">
+                <div class="settings-box-title">
+                  <span class="step-badge step-blue">01</span>
+                  <span>Gemini AI &amp; โมเดลหลัก</span>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="settingsApiKeyInput">Gemini API Key</label>
+                  <input
+                    type="password"
+                    id="settingsApiKeyInput"
+                    class="field-input mono"
+                    placeholder="AIzaSy... (ว่างไว้ = Demo Mode)"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="settingsModelSelect">โมเดลเริ่มต้น</label>
+                  <select id="settingsModelSelect" class="field-select">
+                    <option value="auto">Auto (3.5 Lite → 3.1 Lite)</option>
+                    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                    <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite</option>
+                    <option value="gemini-3.8-flash">gemini-3.8-flash</option>
+                    <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+                    <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
+                  </select>
+                </div>
+                <a class="link-btn-inline" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">
+                  สร้าง / ดู Gemini API Key ↗
+                </a>
+              </div>
+
+              <!-- Settings Col 2: Google Drive & Sheet -->
+              <div class="settings-box">
+                <div class="settings-box-title">
+                  <span class="step-badge step-green">02</span>
+                  <span>Google Drive &amp; Google Sheet</span>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="settingsWebhookInput">Apps Script Web App URL</label>
+                  <input
+                    type="url"
+                    id="settingsWebhookInput"
+                    class="field-input mono"
+                    placeholder="https://script.google.com/macros/s/.../exec"
+                  />
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="settingsSheetUrlInput">ลิงก์ Google Sheet (เว้นว่าง = สร้างใหม่)</label>
+                  <input
+                    type="text"
+                    id="settingsSheetUrlInput"
+                    class="field-input mono"
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                  />
+                </div>
+                <div class="settings-inline-row">
+                  <label class="sheet-autolog-label">
+                    <input type="checkbox" id="settingsAutoSaveToggle" />
+                    <span>บันทึก Google Sheet อัตโนมัติทุกครั้ง</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Settings Col 3: UX / Appearance / Cache -->
+              <div class="settings-box">
+                <div class="settings-box-title">
+                  <span class="step-badge step-yellow">03</span>
+                  <span>แอนิเมชัน &amp; ข้อมูลในเครื่อง</span>
+                </div>
+                <label class="settings-toggle-row">
+                  <span>✨ แอนิเมชันพื้นหลังและเอฟเฟกต์เคลื่อนไหว</span>
+                  <input type="checkbox" id="settingsAnimationsToggle" checked />
+                </label>
+                <label class="settings-toggle-row">
+                  <span>🔒 ล็อกตัวละคร/มือทุกช็อตเป็นค่าเริ่มต้น</span>
+                  <input type="checkbox" id="settingsLockDefaultToggle" checked />
+                </label>
+                <div class="settings-action-btns">
+                  <button type="button" id="settingsExportCsvBtn" class="btn-secondary-sm">↓ Export .CSV ประวัติ</button>
+                  <button type="button" id="settingsClearCacheBtn" class="btn-copy-sm">ล้างประวัติที่จำไว้</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
       <!-- Expandable Modular Add-ons & Tools Drawer -->
       <section id="addonsDrawerPanel" class="glass-card addons-drawer hidden" aria-label="ศูนย์รวมฟังก์ชันเสริม">
         <div class="addons-drawer-top">
@@ -1006,6 +1153,8 @@
         Powered by <code>gemini-3.5-flash-lite</code> • <code>Fast Mode</code> • URL Context &amp; Google Search Grounding
       </div>
     </footer>
+      </div>
+    </div>
 
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 

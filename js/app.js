@@ -2072,6 +2072,13 @@ function updateApiStatusDot() {
   el.apiStatusDot.title = connected
     ? 'เชื่อมต่อ Gemini 3.5 Flash-Lite / 3.8 Flash API Key แล้ว'
     : 'ยังไม่ได้ใส่ API Key (ใช้งานโหมด Demo ได้ทันที)';
+
+  const sideDot = document.getElementById('sidebarStatusDot');
+  const sideTitle = document.getElementById('sidebarStatusTitle');
+  const sideSub = document.getElementById('sidebarStatusSub');
+  if (sideDot) sideDot.classList.toggle('connected', connected);
+  if (sideTitle) sideTitle.textContent = connected ? 'Gemini AI เชื่อมต่อแล้ว' : 'Demo Mode พร้อมใช้';
+  if (sideSub) sideSub.textContent = connected ? 'พร้อม Auto-Fill & วิเคราะห์ลิงก์' : 'ใส่ Gemini Key เพื่อใช้ AI จริง';
 }
 
 function init() {
@@ -2176,6 +2183,7 @@ function init() {
       const cur = el.productBenefitsInput?.value.trim() || '';
       el.productBenefitsInput.value = cur ? `${hookText}\n${cur}` : hookText;
     },
+    onExportCsv: exportAllSessionsAsCsv,
     onShowToast: showToast
   });
 }
