@@ -227,7 +227,7 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
   "audience": "กลุ่มเป้าหมายหลักในไทย",
   "visualDetails": "รายละเอียดลักษณะสินค้า สี บรรจุภัณฑ์ และพร็อพที่เหมาะถ่ายทำ (ภาษาไทยหรืออังกฤษ)",
   "characterAnchor": "คำบรรยายพรีเซนเตอร์/มือผู้สาธิตที่เหมาะกับสินค้านี้เป็นภาษาอังกฤษสั้นๆ สำหรับล็อกตัวละครใน Google Flow",
-  "productImageUrl": "URL รูปภาพสินค้าโดยตรง (https://... .jpg/.png/.webp) ถ้าพบจากหน้าเว็บหรือผลการค้นหา มิฉะนั้นใส่ค่าว่าง",
+  "productImageUrls": ["URL รูปภาพสินค้าโดยตรง 1", "URL รูปภาพสินค้า 2 (มุมอื่น/ดีเทล ถ้าพบ)"],
   "note": "หมายเหตุสั้นๆ หากเป็นลิงก์ย่อที่ติดหน้าล็อกอินหรือไม่ได้ใช้ Search Grounding"
 }`;
 
@@ -303,6 +303,17 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
       );
 
       const parsed = extractJsonObject(result.text);
+      const rawImgs = [];
+      if (Array.isArray(parsed.productImageUrls)) rawImgs.push(...parsed.productImageUrls);
+      if (parsed.productImageUrl) rawImgs.push(parsed.productImageUrl);
+      const productImageUrls = Array.from(
+        new Set(
+          rawImgs
+            .map((u) => String(u || '').trim())
+            .filter((u) => /^https?:\/\//i.test(u))
+        )
+      ).slice(0, 6);
+
       return {
         productName: parsed.productName || '',
         benefits: parsed.benefits || '',
@@ -310,7 +321,8 @@ ${hasImage ? 'แนบรูปสินค้า Ingredient 1 มาด้ว�
         audience: parsed.audience || '',
         visualDetails: parsed.visualDetails || '',
         characterAnchor: parsed.characterAnchor || '',
-        productImageUrl: parsed.productImageUrl || '',
+        productImageUrl: productImageUrls[0] || '',
+        productImageUrls,
         note: parsed.note || '',
         sources: result.sources,
         modelId: result.model.id,
@@ -376,7 +388,12 @@ function isLikelyBlockedOrLogo(imageUrl, title = '') {
     lowerImg.includes('favicon') ||
     lowerImg.includes('captcha') ||
     lowerImg.includes('sprite') ||
-    /\/logo[-_.]/.test(lowerImg)
+    lowerImg.includes('1x1') ||
+    lowerImg.includes('pixel') ||
+    lowerImg.includes('spinner') ||
+    lowerImg.includes('blank.') ||
+    lowerImg.includes('emoji') ||
+    /\/(logo|icon|badge|avatar)[-_./]/.test(lowerImg)
   ) {
     return { blocked: false, rejectImage: true };
   }
@@ -411,6 +428,26 @@ async function fetchTextWithTimeout(url, timeoutMs = 5500) {
   }
 }
 
+function collectJsonLdImages(node, out = []) {
+  if (!node) return out;
+  if (Array.isArray(node)) {
+    node.forEach((item) => collectJsonLdImages(item, out));
+    return out;
+  }
+  if (typeof node === 'object') {
+    if (node.image) {
+      if (typeof node.image === 'string') out.push(node.image);
+      else if (Array.isArray(node.image)) {
+        node.image.forEach((im) => out.push(typeof im === 'string' ? im : im?.url || im?.contentUrl || ''));
+      } else if (node.image.url || node.image.contentUrl) {
+        out.push(node.image.url || node.image.contentUrl);
+      }
+    }
+    if (node['@graph']) collectJsonLdImages(node['@graph'], out);
+  }
+  return out;
+}
+
 function parseOpenGraphFromHtml(html, baseUrl) {
   if (!html || typeof DOMParser === 'undefined') return null;
   try {
@@ -432,53 +469,77 @@ function parseOpenGraphFromHtml(html, baseUrl) {
       'meta[name="twitter:description"]',
       'meta[name="description"]'
     ]);
-    let imageUrl = resolveMaybeRelativeUrl(
-      getMeta([
-        'meta[property="og:image:secure_url"]',
-        'meta[property="og:image"]',
-        'meta[name="twitter:image"]',
-        'link[rel="image_src"]'
-      ]),
-      baseUrl
-    );
 
-    if (!imageUrl) {
-      const ldScripts = Array.from(doc.querySelectorAll('script[type="application/ld+json"]'));
-      for (const sc of ldScripts) {
-        try {
-          const json = JSON.parse(sc.textContent || '{}');
-          const imgField = Array.isArray(json.image) ? json.image[0] : json.image;
-          const rawImg = typeof imgField === 'string' ? imgField : imgField?.url || '';
-          const resolved = resolveMaybeRelativeUrl(rawImg, baseUrl);
-          if (resolved) {
-            imageUrl = resolved;
-            break;
-          }
-        } catch {
-          // ignore invalid JSON-LD
-        }
+    const rawCandidates = [];
+
+    // 1) All og:image / twitter:image meta tags
+    doc
+      .querySelectorAll(
+        'meta[property="og:image:secure_url"], meta[property="og:image"], meta[name="twitter:image"], meta[property="product:image"], link[rel="image_src"]'
+      )
+      .forEach((node) => {
+        const v = node.getAttribute('content') || node.getAttribute('href') || '';
+        if (v) rawCandidates.push(v);
+      });
+
+    // 2) All JSON-LD product/webpage images
+    doc.querySelectorAll('script[type="application/ld+json"]').forEach((sc) => {
+      try {
+        const json = JSON.parse(sc.textContent || '{}');
+        collectJsonLdImages(json, rawCandidates);
+      } catch {
+        // ignore invalid JSON-LD
+      }
+    });
+
+    // 3) Product gallery <img> tags (checking src, data-src, data-lazy-src, srcset)
+    doc.querySelectorAll('img').forEach((img) => {
+      const wAttr = Number(img.getAttribute('width') || 0);
+      const hAttr = Number(img.getAttribute('height') || 0);
+      if ((wAttr > 0 && wAttr < 80) || (hAttr > 0 && hAttr < 80)) return;
+      const src =
+        img.getAttribute('data-zoom-image') ||
+        img.getAttribute('data-large-image') ||
+        img.getAttribute('data-src') ||
+        img.getAttribute('data-lazy-src') ||
+        img.getAttribute('src') ||
+        '';
+      if (src) rawCandidates.push(src);
+    });
+
+    const imageUrls = [];
+    const seen = new Set();
+    for (const raw of rawCandidates) {
+      const resolved = resolveMaybeRelativeUrl(raw, baseUrl);
+      if (!resolved || seen.has(resolved)) continue;
+      const check = isLikelyBlockedOrLogo(resolved, title);
+      if (!check.blocked && !check.rejectImage) {
+        seen.add(resolved);
+        imageUrls.push(resolved);
+        if (imageUrls.length >= 8) break;
       }
     }
 
-    return { title, description, imageUrl };
+    return { title, description, imageUrl: imageUrls[0] || '', imageUrls };
   } catch {
     return null;
   }
 }
 
 /**
- * Fetches OpenGraph metadata + product image URL from a pasted link (client-side CORS-friendly).
+ * Fetches OpenGraph metadata + MULTIPLE product image URLs from a pasted link (client-side CORS-friendly).
  */
 export async function fetchProductPreviewFromUrl(rawUrl) {
   const normalizedUrl = normalizeHttpUrl(rawUrl);
   if (!normalizedUrl) {
-    return { imageUrl: '', title: '', description: '', finalUrl: '', blockedReason: '', source: '' };
+    return { imageUrl: '', imageUrls: [], title: '', description: '', finalUrl: '', blockedReason: '', source: '' };
   }
 
   // Direct image link pasted
   if (/\.(png|jpe?g|webp|avif)(\?|#|$)/i.test(normalizedUrl)) {
     return {
       imageUrl: normalizedUrl,
+      imageUrls: [normalizedUrl],
       title: '',
       description: '',
       finalUrl: normalizedUrl,
@@ -489,86 +550,100 @@ export async function fetchProductPreviewFromUrl(rawUrl) {
 
   let bestTitle = '';
   let bestDesc = '';
-  let bestImg = '';
   let finalUrl = normalizedUrl;
   let blockedReason = '';
-  let source = '';
+  const collectedImgs = [];
+  const seenImgs = new Set();
+  const sourcesUsed = [];
 
-  // 1) Microlink API (free, CORS-enabled, resolves redirects & og:image)
-  const micro = await fetchJsonWithTimeout(
-    `https://api.microlink.io/?url=${encodeURIComponent(normalizedUrl)}`,
-    6000
-  );
-  if (micro?.status === 'success' && micro?.data) {
-    const candidateTitle = (micro.data.title || '').trim();
-    const candidateImg = resolveMaybeRelativeUrl(micro.data.image?.url || '', normalizedUrl);
-    const check = isLikelyBlockedOrLogo(candidateImg, candidateTitle);
+  const pushImageCandidate = (rawImg, titleForCheck) => {
+    const resolved = resolveMaybeRelativeUrl(rawImg, normalizedUrl);
+    if (!resolved || seenImgs.has(resolved)) return false;
+    const check = isLikelyBlockedOrLogo(resolved, titleForCheck);
     if (check.blocked) {
       blockedReason = check.reason;
+      return false;
+    }
+    if (!check.rejectImage) {
+      seenImgs.add(resolved);
+      collectedImgs.push(resolved);
+      return true;
+    }
+    return false;
+  };
+
+  // Run Microlink + JSONLink in parallel for speed and multi-image coverage
+  const [micro, jlink] = await Promise.all([
+    fetchJsonWithTimeout(`https://api.microlink.io/?url=${encodeURIComponent(normalizedUrl)}`, 6000),
+    fetchJsonWithTimeout(`https://jsonlink.io/api/extract?url=${encodeURIComponent(normalizedUrl)}`, 5500)
+  ]);
+
+  if (micro?.status === 'success' && micro?.data) {
+    const candidateTitle = (micro.data.title || '').trim();
+    const checkTitle = isLikelyBlockedOrLogo('', candidateTitle);
+    if (checkTitle.blocked) {
+      blockedReason = checkTitle.reason;
     } else {
       bestTitle = candidateTitle;
       bestDesc = (micro.data.description || '').trim();
       finalUrl = micro.data.url || normalizedUrl;
-      if (candidateImg && !check.rejectImage) {
-        bestImg = candidateImg;
-        source = 'microlink';
+      if (micro.data.image?.url && pushImageCandidate(micro.data.image.url, candidateTitle)) {
+        sourcesUsed.push('microlink');
       }
     }
   }
 
-  // 2) JSONLink fallback if image still empty
-  if (!bestImg && !blockedReason) {
-    const jlink = await fetchJsonWithTimeout(
-      `https://jsonlink.io/api/extract?url=${encodeURIComponent(normalizedUrl)}`,
-      5000
-    );
-    if (jlink) {
-      const candidateTitle = (jlink.title || '').trim();
-      const firstImg = Array.isArray(jlink.images) ? jlink.images[0] : '';
-      const candidateImg = resolveMaybeRelativeUrl(firstImg, normalizedUrl);
-      const check = isLikelyBlockedOrLogo(candidateImg, candidateTitle);
-      if (check.blocked) {
-        blockedReason = check.reason;
-      } else {
-        if (!bestTitle && candidateTitle) bestTitle = candidateTitle;
-        if (!bestDesc && jlink.description) bestDesc = String(jlink.description).trim();
-        if (candidateImg && !check.rejectImage) {
-          bestImg = candidateImg;
-          source = 'jsonlink';
+  if (jlink && !blockedReason) {
+    const candidateTitle = (jlink.title || '').trim();
+    const checkTitle = isLikelyBlockedOrLogo('', candidateTitle);
+    if (checkTitle.blocked) {
+      blockedReason = checkTitle.reason;
+    } else {
+      if (!bestTitle && candidateTitle) bestTitle = candidateTitle;
+      if (!bestDesc && jlink.description) bestDesc = String(jlink.description).trim();
+      if (Array.isArray(jlink.images)) {
+        let added = 0;
+        for (const im of jlink.images) {
+          if (pushImageCandidate(im, candidateTitle)) added += 1;
+          if (collectedImgs.length >= 8) break;
         }
+        if (added > 0) sourcesUsed.push('jsonlink');
       }
     }
   }
 
-  // 3) OpenGraph HTML fallback via CORS-friendly raw proxy
-  if (!bestImg && !blockedReason) {
+  // 3) OpenGraph / JSON-LD / Product Gallery HTML fallback whenever < 4 images collected
+  if (collectedImgs.length < 4 && !blockedReason) {
     const html = await fetchTextWithTimeout(
       `https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedUrl)}`,
       5500
     );
     const og = parseOpenGraphFromHtml(html, normalizedUrl);
     if (og) {
-      const check = isLikelyBlockedOrLogo(og.imageUrl, og.title);
-      if (check.blocked) {
-        blockedReason = check.reason;
+      const checkTitle = isLikelyBlockedOrLogo('', og.title);
+      if (checkTitle.blocked) {
+        blockedReason = checkTitle.reason;
       } else {
         if (!bestTitle && og.title) bestTitle = og.title;
         if (!bestDesc && og.description) bestDesc = og.description;
-        if (og.imageUrl && !check.rejectImage) {
-          bestImg = og.imageUrl;
-          source = 'opengraph';
+        let added = 0;
+        for (const im of og.imageUrls || []) {
+          if (pushImageCandidate(im, og.title)) added += 1;
+          if (collectedImgs.length >= 8) break;
         }
+        if (added > 0) sourcesUsed.push('opengraph');
       }
     }
   }
 
   return {
-    imageUrl: bestImg,
+    imageUrl: collectedImgs[0] || '',
+    imageUrls: collectedImgs,
     title: bestTitle,
     description: bestDesc,
     finalUrl,
     blockedReason,
-    source
+    source: sourcesUsed.join('+')
   };
 }
 

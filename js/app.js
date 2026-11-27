@@ -59,6 +59,7 @@ const state = {
   plan: null,
   ugcImage: null, // { dataUrl, base64, mimeType, modelId }
   slideVideo: null, // { objectUrl, file, name, sizeMB }
+  fetchedProductImages: [],
   driveHistory: [],
   sheetHistory: [],
   autoSaveSheet: false,
@@ -94,6 +95,9 @@ function cacheDom() {
     'ingredient2Img',
     'ingredient2Badge',
     'ingredient2Remove',
+    'fetchedImagesGalleryCard',
+    'fetchedGalleryTitle',
+    'fetchedImagesGrid',
     'lockCharacterCard',
     'lockCharacterToggle',
     'characterAnchorWrap',
@@ -352,17 +356,129 @@ async function compressImageFromUrlTo640(imageUrl) {
   throw new Error('ไม่สามารถโหลดไฟล์รูปภาพข้ามโดเมนจากลิงก์นี้ได้');
 }
 
+function applyCompressedToSlot(slotNum, compressed) {
+  const key = `ingredient${slotNum}`;
+  state[key] = compressed;
+  el[`${key}Img`].src = compressed.dataUrl;
+  el[`${key}Badge`].textContent = `${compressed.width}×${compressed.height}px • ${compressed.sizeKB} KB`;
+  el[`${key}Slot`].classList.add('has-image');
+}
+
+function renderFetchedGallery() {
+  if (!el.fetchedImagesGalleryCard || !el.fetchedImagesGrid) return;
+  const imgs = state.fetchedProductImages || [];
+  if (!imgs.length) {
+    el.fetchedImagesGalleryCard.classList.add('hidden');
+    el.fetchedImagesGrid.innerHTML = '';
+    return;
+  }
+
+  el.fetchedImagesGalleryCard.classList.remove('hidden');
+  if (el.fetchedGalleryTitle) {
+    el.fetchedGalleryTitle.textContent = `พบรูปสินค้าจากลิงก์ ${imgs.length} รูป`;
+  }
+
+  const ing1Src = state.ingredient1?.sourceImageUrl || '';
+  const ing2Src = state.ingredient2?.sourceImageUrl || '';
+
+  el.fetchedImagesGrid.innerHTML = imgs
+    .map((im, idx) => {
+      const is1 = ing1Src && ing1Src === im.sourceImageUrl;
+      const is2 = ing2Src && ing2Src === im.sourceImageUrl;
+      return `
+      <div class="fetched-thumb-item ${is1 ? 'active-ing1' : ''} ${is2 ? 'active-ing2' : ''}">
+        <img
+          src="${im.dataUrl}"
+          class="fetched-thumb-img"
+          alt="รูปสินค้าที่ดึงได้ #${idx + 1}"
+          title="คลิกเพื่อใช้เป็น Ingredient 1 (${im.width}×${im.height}px)"
+          data-pick-img="${idx}"
+        />
+        <div class="fetched-thumb-actions">
+          <button type="button" class="fetched-assign-btn ${is1 ? 'active' : ''}" data-assign-slot="1" data-assign-idx="${idx}" title="ใช้เป็น Ingredient 1">
+            Ing 1
+          </button>
+          <button type="button" class="fetched-assign-btn ${is2 ? 'active' : ''}" data-assign-slot="2" data-assign-idx="${idx}" title="ใช้เป็น Ingredient 2">
+            Ing 2
+          </button>
+        </div>
+      </div>
+    `;
+    })
+    .join('');
+
+  el.fetchedImagesGrid.querySelectorAll('[data-pick-img]').forEach((imgEl) => {
+    imgEl.addEventListener('click', () => {
+      const im = imgs[Number(imgEl.dataset.pickImg)];
+      if (!im) return;
+      applyCompressedToSlot(1, im);
+      renderFetchedGallery();
+      showToast(`เลือกใช้รูปที่ ${Number(imgEl.dataset.pickImg) + 1} เป็น Ingredient 1 แล้ว`, 'success');
+    });
+  });
+
+  el.fetchedImagesGrid.querySelectorAll('[data-assign-slot]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const slot = Number(btn.dataset.assignSlot);
+      const idx = Number(btn.dataset.assignIdx);
+      const im = imgs[idx];
+      if (!im) return;
+      applyCompressedToSlot(slot, im);
+      renderFetchedGallery();
+      showToast(`เลือกใช้รูปที่ ${idx + 1} เป็น Ingredient ${slot} แล้ว`, 'success');
+    });
+  });
+}
+
 async function applyRemoteProductImageToIngredient1(imageUrl, sourcePageUrl = '') {
   const compressed = await compressImageFromUrlTo640(imageUrl);
   compressed.fromAutoUrl = true;
   compressed.sourcePageUrl = sourcePageUrl;
   compressed.sourceImageUrl = imageUrl;
 
-  state.ingredient1 = compressed;
-  el.ingredient1Img.src = compressed.dataUrl;
-  el.ingredient1Badge.textContent = `${compressed.width}×${compressed.height}px • ${compressed.sizeKB} KB`;
-  el.ingredient1Slot.classList.add('has-image');
+  applyCompressedToSlot(1, compressed);
   return compressed;
+}
+
+async function loadMultipleProductImagesFromUrls(candidateUrls = [], sourcePageUrl = '') {
+  const uniqueUrls = Array.from(
+    new Set((candidateUrls || []).map((u) => String(u || '').trim()).filter(Boolean))
+  ).slice(0, 8);
+
+  if (!uniqueUrls.length) return [];
+
+  const settled = await Promise.allSettled(
+    uniqueUrls.map(async (imgUrl) => {
+      const compressed = await compressImageFromUrlTo640(imgUrl);
+      compressed.fromAutoUrl = true;
+      compressed.sourcePageUrl = sourcePageUrl;
+      compressed.sourceImageUrl = imgUrl;
+      return compressed;
+    })
+  );
+
+  const loaded = settled
+    .filter((s) => s.status === 'fulfilled' && s.value)
+    .map((s) => s.value);
+
+  // Deduplicate identical dataUrl images
+  const uniqueLoaded = [];
+  const seenData = new Set();
+  for (const item of loaded) {
+    if (!seenData.has(item.dataUrl)) {
+      seenData.add(item.dataUrl);
+      uniqueLoaded.push(item);
+    }
+  }
+
+  state.fetchedProductImages = uniqueLoaded;
+
+  if (uniqueLoaded.length && (!state.ingredient1 || state.ingredient1.fromAutoUrl || state.ingredient1.sourcePageUrl !== sourcePageUrl)) {
+    applyCompressedToSlot(1, uniqueLoaded[0]);
+  }
+  renderFetchedGallery();
+  return uniqueLoaded;
 }
 
 function setupIngredientSlot(slotNum) {
@@ -511,12 +627,19 @@ function loadSampleProduct(sampleKey, silent = false) {
   el.groundingSources.innerHTML = '';
   state.isSamplePreload = true;
   state.lastPrefetchedUrl = '';
+  state.fetchedProductImages = [];
 
   if (state.ingredient1?.fromAutoUrl) {
     state.ingredient1 = null;
     el.ingredient1Img.src = '';
     el.ingredient1Slot.classList.remove('has-image');
   }
+  if (state.ingredient2?.fromAutoUrl) {
+    state.ingredient2 = null;
+    el.ingredient2Img.src = '';
+    el.ingredient2Slot.classList.remove('has-image');
+  }
+  renderFetchedGallery();
 
   if (!silent) {
     showToast(`โหลดข้อมูลตัวอย่าง "${sample.name}" แล้ว`, 'info');
@@ -527,13 +650,13 @@ async function prefetchProductFromUrlOnPaste(rawUrl, options = {}) {
   const { silentNoKey = false } = options;
   const url = (rawUrl || '').trim();
   if (!url || !/(https?:\/\/|[a-z0-9-]+\.[a-z]{2,})/i.test(url)) return null;
-  if (url === state.lastPrefetchedUrl && state.ingredient1?.sourcePageUrl === url) {
+  if (url === state.lastPrefetchedUrl && state.fetchedProductImages.length > 0) {
     return null;
   }
   state.lastPrefetchedUrl = url;
 
   el.groundingSources.innerHTML =
-    '<span class="grounding-chip">⏳ กำลังดึงรูปสินค้า &amp; ข้อมูลจากลิงก์...</span>';
+    '<span class="grounding-chip">⏳ กำลังดึงรูปสินค้าหลายมุม &amp; ข้อมูลจากลิงก์...</span>';
 
   const preview = await fetchProductPreviewFromUrl(url);
 
@@ -547,20 +670,23 @@ async function prefetchProductFromUrlOnPaste(rawUrl, options = {}) {
     state.isSamplePreload = false;
   }
 
-  let loadedIng = null;
-  if (preview.imageUrl && (!state.ingredient1 || state.ingredient1.fromAutoUrl)) {
-    try {
-      loadedIng = await applyRemoteProductImageToIngredient1(preview.imageUrl, url);
-    } catch {
-      loadedIng = null;
-    }
-  }
+  const candidateUrls =
+    Array.isArray(preview.imageUrls) && preview.imageUrls.length
+      ? preview.imageUrls
+      : preview.imageUrl
+        ? [preview.imageUrl]
+        : [];
 
-  if (loadedIng) {
-    el.groundingSources.innerHTML = `<span class="grounding-chip">✓ ดึงรูปสินค้าลง Ingredient 1 แล้ว (${loadedIng.width}×${loadedIng.height}px)</span>`;
+  const loadedImgs = await loadMultipleProductImagesFromUrls(candidateUrls, url);
+  const loadedIng = loadedImgs[0] || null;
+
+  if (loadedImgs.length) {
+    el.groundingSources.innerHTML = `<span class="grounding-chip">✓ ดึงรูปสินค้าได้ ${loadedImgs.length} รูป (ใส่ Ingredient 1 แล้ว)</span>`;
     if (!silentNoKey) {
       showToast(
-        `ดึงรูปสินค้าจากลิงก์ลง Ingredient 1 สำเร็จ! (${loadedIng.width}×${loadedIng.height}px)`,
+        loadedImgs.length > 1
+          ? `ดึงรูปสินค้าจากลิงก์สำเร็จ ${loadedImgs.length} รูป! เลือกสลับใช้ในช่อง 02 ได้เลย`
+          : `ดึงรูปสินค้าจากลิงก์ลง Ingredient 1 สำเร็จ! (${loadedIng.width}×${loadedIng.height}px)`,
         'success'
       );
     }
@@ -580,7 +706,7 @@ async function prefetchProductFromUrlOnPaste(rawUrl, options = {}) {
     rebuildUgcPromptFromInputs();
   }
 
-  return { preview, loadedIng };
+  return { preview, loadedIng, loadedImgs };
 }
 
 async function handleAutoFill() {
@@ -660,10 +786,16 @@ async function handleAutoFill() {
     const preview = previewSettled.status === 'fulfilled' ? previewSettled.value : null;
 
     if (geminiSettled.status !== 'fulfilled') {
-      // Even if Gemini failed, still try applying the fetched product image from URL!
-      if (preview?.imageUrl && (!state.ingredient1 || state.ingredient1.fromAutoUrl)) {
+      // Even if Gemini failed, still try loading all fetched product images from URL!
+      const fallbackUrls =
+        Array.isArray(preview?.imageUrls) && preview.imageUrls.length
+          ? preview.imageUrls
+          : preview?.imageUrl
+            ? [preview.imageUrl]
+            : [];
+      if (fallbackUrls.length) {
         try {
-          await applyRemoteProductImageToIngredient1(preview.imageUrl, url);
+          await loadMultipleProductImagesFromUrls(fallbackUrls, url);
         } catch {
           // ignore
         }
@@ -680,26 +812,25 @@ async function handleAutoFill() {
     if (result.visualDetails) el.productVisualInput.value = result.visualDetails;
     if (result.characterAnchor) el.characterAnchorInput.value = result.characterAnchor;
 
-    // Try loading product image from Gemini productImageUrl or OpenGraph preview into Ingredient 1
-    let ingLoaded = null;
-    const imgCandidates = [result.productImageUrl, preview?.imageUrl].filter(Boolean);
-    if (imgCandidates.length && (!state.ingredient1 || state.ingredient1.fromAutoUrl || state.ingredient1.sourcePageUrl !== url)) {
-      for (const candidateImg of imgCandidates) {
-        try {
-          ingLoaded = await applyRemoteProductImageToIngredient1(candidateImg, url);
-          break;
-        } catch {
-          // try next image candidate
-        }
-      }
-    }
+    // Load MULTIPLE product images from Gemini productImageUrls + OpenGraph preview into gallery & Ingredient 1
+    const imgCandidates = [
+      ...(Array.isArray(result.productImageUrls) ? result.productImageUrls : []),
+      ...(result.productImageUrl ? [result.productImageUrl] : []),
+      ...(Array.isArray(preview?.imageUrls) ? preview.imageUrls : []),
+      ...(preview?.imageUrl ? [preview.imageUrl] : [])
+    ].filter(Boolean);
+
+    const loadedImgs = imgCandidates.length
+      ? await loadMultipleProductImagesFromUrls(imgCandidates, url)
+      : [];
+    const ingLoaded = loadedImgs[0] || null;
 
     const noteBadge = result.note
       ? `<span class="sample-label" style="color:#fde047;">หมายเหตุ: ${escapeHtml(result.note)}</span>`
       : '';
 
-    const ingBadgeHtml = ingLoaded
-      ? `<span class="grounding-chip">✓ ดึงรูปลง Ingredient 1 (${ingLoaded.width}×${ingLoaded.height}px)</span>`
+    const ingBadgeHtml = loadedImgs.length
+      ? `<span class="grounding-chip">✓ ดึงรูปสินค้าได้ ${loadedImgs.length} รูป (ใส่ Ingredient 1 แล้ว)</span>`
       : '';
 
     const modeBadge = `<span class="grounding-chip">${escapeHtml(result.modelId)} • ${escapeHtml(result.strategyName || 'Auto-Fill')}</span>`;
@@ -723,9 +854,11 @@ async function handleAutoFill() {
     }
 
     showToast(
-      ingLoaded
-        ? `AI Auto-Fill + ดึงรูปลง Ingredient 1 สำเร็จด้วย ${result.modelId}!`
-        : `AI Auto-Fill สำเร็จด้วย ${result.modelId} (${result.strategyName})!`,
+      loadedImgs.length > 1
+        ? `AI Auto-Fill + ดึงรูปสินค้า ${loadedImgs.length} รูป สำเร็จด้วย ${result.modelId}!`
+        : ingLoaded
+          ? `AI Auto-Fill + ดึงรูปลง Ingredient 1 สำเร็จด้วย ${result.modelId}!`
+          : `AI Auto-Fill สำเร็จด้วย ${result.modelId} (${result.strategyName})!`,
       'success'
     );
   } catch (err) {
@@ -1795,7 +1928,8 @@ function initUgcGridStudio() {
       const composed = await renderUgc4GridCanvas({
         productName: el.productNameInput.value.trim() || 'สินค้าแนะนำ',
         panels: getUgcLabels(),
-        ingredient1: state.ingredient1
+        ingredient1: state.ingredient1,
+        extraImages: state.fetchedProductImages
       });
       setUgcImagePreview(composed);
       el.ugcImageStatus.textContent =

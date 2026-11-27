@@ -99,7 +99,8 @@ function drawHandDrawnDoodle(ctx, x, y, type, color) {
 export async function renderUgc4GridCanvas({
   productName = 'สินค้าแนะนำ',
   panels = [],
-  ingredient1 = null
+  ingredient1 = null,
+  extraImages = []
 }) {
   if (document.fonts?.ready) {
     await document.fonts.ready;
@@ -112,14 +113,24 @@ export async function renderUgc4GridCanvas({
   canvas.height = size;
   const ctx = canvas.getContext('2d');
 
-  let refImg = null;
-  if (ingredient1?.dataUrl) {
+  const candidateDataUrls = [];
+  if (ingredient1?.dataUrl) candidateDataUrls.push(ingredient1.dataUrl);
+  for (const extra of extraImages || []) {
+    if (extra?.dataUrl && !candidateDataUrls.includes(extra.dataUrl)) {
+      candidateDataUrls.push(extra.dataUrl);
+    }
+    if (candidateDataUrls.length >= 4) break;
+  }
+
+  const loadedImgs = [];
+  for (const src of candidateDataUrls) {
     try {
-      refImg = await loadImage(ingredient1.dataUrl);
+      loadedImgs.push(await loadImage(src));
     } catch {
-      refImg = null;
+      // skip failed image
     }
   }
+  const refImg = loadedImgs[0] || null;
 
   // Warm candid UGC room palettes (no studio harshness, seamless transitions)
   const quadrantThemes = [
@@ -212,14 +223,15 @@ export async function renderUgc4GridCanvas({
     ctx.fillStyle = sun;
     ctx.fillRect(x, y, half, half);
 
-    if (refImg) {
-      // Draw real uploaded Ingredient 1 image with distinct candid POV crop/angle per quadrant
-      const scale = Math.max(half / refImg.width, half / refImg.height) * theme.zoom;
-      const drawW = refImg.width * scale;
-      const drawH = refImg.height * scale;
+    const panelImg = loadedImgs[i] || refImg;
+    if (panelImg) {
+      // Draw real uploaded/fetched product image per quadrant
+      const scale = Math.max(half / panelImg.width, half / panelImg.height) * theme.zoom;
+      const drawW = panelImg.width * scale;
+      const drawH = panelImg.height * scale;
       const drawX = x + (half - drawW) / 2 + half * theme.offsetX;
       const drawY = y + (half - drawH) / 2 + half * theme.offsetY;
-      ctx.drawImage(refImg, drawX, drawY, drawW, drawH);
+      ctx.drawImage(panelImg, drawX, drawY, drawW, drawH);
 
       // Gentle warm UGC film tint
       ctx.fillStyle = 'rgba(255, 245, 225, 0.08)';
