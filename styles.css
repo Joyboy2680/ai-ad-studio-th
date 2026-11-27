@@ -947,6 +947,34 @@ body.reduce-animations *::after {
   gap: 16px;
 }
 
+/* Dedicated Full-Page SPA Views when selecting sidebar functions */
+.studio-grid.page-focus-output .panel-left {
+  display: none;
+}
+
+.studio-grid.page-focus-output .panel-right {
+  grid-column: 1 / -1;
+  position: static;
+  animation: tabSlideIn 0.32s var(--ease-spring);
+}
+
+.studio-grid.page-focus-sheet .panel-left,
+.studio-grid.page-focus-sheet .tabs-shell,
+.studio-grid.page-focus-sheet .tab-panels-body {
+  display: none;
+}
+
+.studio-grid.page-focus-sheet .panel-right {
+  grid-column: 1 / -1;
+  position: static;
+  animation: tabSlideIn 0.32s var(--ease-spring);
+}
+
+.studio-grid.page-focus-sheet .output-header {
+  border-bottom: none;
+  padding-bottom: 22px;
+}
+
 .card-pad {
   padding: 21px 23px;
 }

@@ -66,26 +66,30 @@
         </div>
 
         <nav class="sidebar-nav" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
-          <div class="sidebar-section-label">สตูดิโอหลัก</div>
+          <div class="sidebar-section-label">หน้าหลัก</div>
           <div class="sidebar-group">
-            <button type="button" class="side-nav-item active" data-menu-tab="slides">
-              <span class="side-nav-icon">🎬</span>
-              <span class="side-nav-label">สตูดิโอคลิป 10 วิ</span>
+            <button type="button" class="side-nav-item active" data-page="studio">
+              <span class="side-nav-icon">🏠</span>
+              <span class="side-nav-label">สตูดิโอผลลัพธ์พร้อมใช้งาน</span>
             </button>
-            <button type="button" class="side-nav-item" data-menu-tab="ugc-grid">
+          </div>
+
+          <div class="sidebar-section-label">ฟังก์ชันแยกหน้า</div>
+          <div class="sidebar-group">
+            <button type="button" class="side-nav-item" data-page="ugc-grid">
               <span class="side-nav-icon">🖼️</span>
               <span class="side-nav-label">ภาพ UGC 4 ช่อง</span>
               <span class="menu-badge mint">1:1</span>
             </button>
-            <button type="button" class="side-nav-item" data-menu-tab="imagen">
+            <button type="button" class="side-nav-item" data-page="imagen">
               <span class="side-nav-icon">📸</span>
               <span class="side-nav-label">ภาพนิ่ง Imagen</span>
             </button>
-            <button type="button" class="side-nav-item" data-menu-tab="captions">
+            <button type="button" class="side-nav-item" data-page="captions">
               <span class="side-nav-icon">💬</span>
               <span class="side-nav-label">แคปชั่น &amp; #</span>
             </button>
-            <button type="button" class="side-nav-item" data-menu-action="toggle-sheet">
+            <button type="button" class="side-nav-item" data-page="sheet">
               <span class="side-nav-icon">📊</span>
               <span class="side-nav-label">Google Sheet Log</span>
             </button>
@@ -98,16 +102,16 @@
 
           <div class="sidebar-section-label">ฟังก์ชันเสริม &amp; ส่วนขยาย</div>
           <div class="sidebar-group">
-            <button type="button" class="side-nav-item" data-menu-action="toggle-addons" data-addon-tab="hooks">
+            <button type="button" class="side-nav-item" data-page="hooks">
               <span class="side-nav-icon">🎣</span>
               <span class="side-nav-label">คลัง Hook ไวรัล</span>
             </button>
-            <button type="button" class="side-nav-item" data-menu-action="toggle-addons" data-addon-tab="roi">
+            <button type="button" class="side-nav-item" data-page="roi">
               <span class="side-nav-icon">💰</span>
               <span class="side-nav-label">คำนวณ ROI</span>
             </button>
             <div id="customMenuSlots" class="custom-menu-slots vertical"></div>
-            <button type="button" id="openAddonsHubBtn" class="side-nav-item side-nav-accent">
+            <button type="button" id="openAddonsHubBtn" class="side-nav-item side-nav-accent" data-page="custom">
               <span class="side-nav-icon">✨</span>
               <span class="side-nav-label">เพิ่มฟังก์ชันเสริม +</span>
             </button>
@@ -115,7 +119,7 @@
 
           <div class="sidebar-section-label">ระบบและการตั้งค่า</div>
           <div class="sidebar-group">
-            <button type="button" id="openSettingsPanelBtn" class="side-nav-item side-nav-settings" data-menu-action="toggle-settings">
+            <button type="button" id="openSettingsPanelBtn" class="side-nav-item side-nav-settings" data-page="settings">
               <span class="side-nav-icon">⚙️</span>
               <span class="side-nav-label">ตั้งค่า &amp; เชื่อมต่อ</span>
             </button>
@@ -152,12 +156,15 @@
               <button type="button" id="mobileSidebarToggle" class="btn-secondary-sm mobile-only-btn" aria-label="เปิดแถบเมนู">
                 ☰ เมนู
               </button>
+              <button type="button" id="backToHomeBtn" class="btn-secondary-sm hidden" title="กลับหน้าหลัก สตูดิโอผลลัพธ์พร้อมใช้งาน">
+                ← กลับหน้าหลัก
+              </button>
               <div class="brand-text">
                 <h1>
-                  AI Ad Studio TH
-                  <span class="edition-tag">10s Flow + UGC</span>
+                  <span id="workspacePageTitle">สตูดิโอผลลัพธ์พร้อมใช้งาน</span>
+                  <span class="edition-tag" id="workspacePageBadge">หน้าหลัก</span>
                 </h1>
-                <p class="brand-subtitle">
+                <p class="brand-subtitle" id="workspacePageSub">
                   สร้างพรอมภาพนิ่ง Imagen &amp; คลิปขายของ 10 วิ • เชื่อม Gemini / Drive / Sheet
                 </p>
               </div>
@@ -219,7 +226,7 @@
                 <span class="step-badge step-blue">⚙️</span>
                 <span>ตั้งค่าสตูดิโอ &amp; การเชื่อมต่อทั้งหมด</span>
               </div>
-              <button type="button" id="closeSettingsPanelBtn" class="btn-secondary-sm">✕ ปิดตั้งค่า</button>
+              <button type="button" id="closeSettingsPanelBtn" class="btn-secondary-sm">← กลับหน้าหลักสตูดิโอ</button>
             </div>
 
             <div class="settings-grid-3">
@@ -317,7 +324,7 @@
             <button type="button" class="tab-btn" data-addon-panel="roi">💰 คำนวณค่าคอม &amp; ROI</button>
             <button type="button" class="tab-btn" data-addon-panel="custom">🔌 เพิ่มปุ่มเมนูฟังก์ชันเสริมเอง</button>
           </div>
-          <button type="button" id="closeAddonsHubBtn" class="btn-secondary-sm">✕ ปิด</button>
+          <button type="button" id="closeAddonsHubBtn" class="btn-secondary-sm">← กลับหน้าหลักสตูดิโอ</button>
         </div>
 
         <div id="addonPanel-hooks" class="addon-subpanel active">
@@ -365,7 +372,7 @@
         </div>
       </section>
 
-      <div class="studio-grid">
+      <div id="studioGrid" class="studio-grid">
         <!-- ================================================================
              LEFT PANEL (5 Columns): Inputs, Ingredients, Lock, Flow & Styles
              ================================================================ -->

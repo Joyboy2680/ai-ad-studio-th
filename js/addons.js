@@ -1,5 +1,7 @@
 /* ==========================================================================
-   AI Ad Studio TH — Vertical Sidebar Menu, Add-ons Hub & Unified Settings
+   AI Ad Studio TH — SPA Page Router, Vertical Sidebar, Add-ons & Settings
+   Home page = สตูดิโอผลลัพธ์พร้อมใช้งาน (#studio)
+   Every other sidebar function switches cleanly to its own dedicated page.
    ========================================================================== */
 
 export const STORAGE_CUSTOM_ADDONS = 'ai_ad_studio_th_custom_menu_addons';
@@ -24,9 +26,56 @@ export const HOOK_TEMPLATES = [
   }
 ];
 
+const PAGE_META = {
+  studio: {
+    title: 'สตูดิโอผลลัพธ์พร้อมใช้งาน',
+    badge: 'หน้าหลัก',
+    sub: 'สร้างพรอมภาพนิ่ง Imagen & คลิปขายของ 10 วิ • เชื่อม Gemini / Drive / Sheet'
+  },
+  'ugc-grid': {
+    title: 'สร้างภาพสินค้า UGC ตาราง 4 ช่อง (1:1)',
+    badge: 'UGC 1:1',
+    sub: 'สร้าง Prompt ภาพรีวิวไม่มีเส้นคั่น → เปิดเว็บ Gemini สร้างรูป → นำรูปกลับมาส่งเข้า Drive'
+  },
+  imagen: {
+    title: 'พรอมภาพนิ่งโฆษณา Imagen (3 ช็อต)',
+    badge: 'Imagen 3',
+    sub: 'ชุดพรอมภาพนิ่งขายสินค้าคมชัด พร้อมคัดลอกใช้งานได้ทันที'
+  },
+  captions: {
+    title: 'แคปชั่นขายของ & แฮชแท็กพร้อมโพสต์',
+    badge: 'Captions & #',
+    sub: 'แคปชั่นแยกแพลตฟอร์ม TikTok / Reels / Facebook พร้อมแฮชแท็กขายดี'
+  },
+  sheet: {
+    title: 'บันทึกประวัติข้อมูลลง Google Sheet',
+    badge: 'Google Sheet',
+    sub: 'ซิงก์ข้อมูลสินค้า & พรอมครบ 18 คอลัมน์ลง Google Sheet อัตโนมัติ หรือ Export .CSV'
+  },
+  hooks: {
+    title: 'คลัง Hook & CTA หยุดนิ้ว 3 วินาที',
+    badge: 'Add-on',
+    sub: 'เลือกประโยคเปิดคลิปไวรัลแล้วกดแทรกเข้าจุดเด่นสินค้าได้ในคลิกเดียว'
+  },
+  roi: {
+    title: 'คำนวณค่าคอมมิชชั่น & ROI นายหน้า',
+    badge: 'Add-on',
+    sub: 'ประเมินรายได้ต่อชิ้น ต่อวัน และต่อเดือนจากราคาสินค้าและค่าคอมมิชชั่น'
+  },
+  custom: {
+    title: 'จัดการฟังก์ชันเสริม & ปุ่มเมนูลัด',
+    badge: 'ส่วนขยาย +',
+    sub: 'เพิ่มลิงก์เครื่องมือเสริมที่ใช้งานประจำขึ้นบนแถบเมนูด้านข้าง'
+  },
+  settings: {
+    title: 'ตั้งค่าสตูดิโอ & การเชื่อมต่อทั้งหมด',
+    badge: 'Settings',
+    sub: 'จัดการ Gemini API Key, โมเดลหลัก, Google Drive / Sheet และโหมดแอนิเมชัน'
+  }
+};
+
 export function initMenuBarAndAddons({
   onSwitchTab,
-  onOpenSheetDrawer,
   onApplyHookText,
   onExportCsv,
   onShowToast
@@ -37,16 +86,20 @@ export function initMenuBarAndAddons({
   const mobileToggleBtn = document.getElementById('mobileSidebarToggle');
   const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
 
-  const customContainer = document.getElementById('customMenuSlots');
+  const studioGrid = document.getElementById('studioGrid');
+  const sheetConfigDrawer = document.getElementById('sheetConfigDrawer');
   const addonsPanel = document.getElementById('addonsDrawerPanel');
-  const openAddonsBtn = document.getElementById('openAddonsHubBtn');
-  const closeAddonsBtn = document.getElementById('closeAddonsHubBtn');
+  const settingsPanel = document.getElementById('settingsPanelCard');
   const hooksGrid = document.getElementById('addonHooksGrid');
 
-  const settingsPanel = document.getElementById('settingsPanelCard');
+  const backToHomeBtn = document.getElementById('backToHomeBtn');
   const topbarSettingsBtn = document.getElementById('topbarSettingsBtn');
-  const openSettingsPanelBtn = document.getElementById('openSettingsPanelBtn');
   const closeSettingsPanelBtn = document.getElementById('closeSettingsPanelBtn');
+  const closeAddonsHubBtn = document.getElementById('closeAddonsHubBtn');
+  const pageTitleEl = document.getElementById('workspacePageTitle');
+  const pageBadgeEl = document.getElementById('workspacePageBadge');
+  const pageSubEl = document.getElementById('workspacePageSub');
+  const customContainer = document.getElementById('customMenuSlots');
 
   if (!menuBar) return;
 
@@ -64,74 +117,6 @@ export function initMenuBarAndAddons({
   sidebarCloseBtn?.addEventListener('click', closeMobileSidebar);
   sidebarBackdrop?.addEventListener('click', closeMobileSidebar);
 
-  // Highlight active sidebar button
-  const menuBtns = menuBar.querySelectorAll('[data-menu-tab], [data-menu-action]');
-  const setActiveMenuBtn = (targetBtn) => {
-    menuBtns.forEach((b) => b.classList.remove('active'));
-    targetBtn?.classList.add('active');
-  };
-
-  function toggleSettingsPanel(forceState = null) {
-    if (!settingsPanel) return;
-    const isHidden = settingsPanel.classList.contains('hidden');
-    const willOpen = forceState !== null ? forceState : isHidden;
-    settingsPanel.classList.toggle('hidden', !willOpen);
-    openSettingsPanelBtn?.classList.toggle('active', willOpen);
-    topbarSettingsBtn?.classList.toggle('active', willOpen);
-    if (willOpen) {
-      addonsPanel?.classList.add('hidden');
-      openAddonsBtn?.classList.remove('active');
-      syncSettingsMirrorsFromPrimary();
-      settingsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  }
-
-  menuBar.querySelectorAll('[data-menu-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tabId = btn.dataset.menuTab;
-      setActiveMenuBtn(btn);
-      onSwitchTab?.(tabId);
-      closeMobileSidebar();
-      document
-        .querySelector('.panel-right')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-  });
-
-  menuBar.querySelectorAll('[data-menu-action]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const action = btn.dataset.menuAction;
-      if (action === 'toggle-sheet') {
-        setActiveMenuBtn(btn);
-        onOpenSheetDrawer?.();
-        closeMobileSidebar();
-      } else if (action === 'toggle-settings') {
-        setActiveMenuBtn(btn);
-        toggleSettingsPanel();
-        closeMobileSidebar();
-      } else if (action === 'toggle-addons') {
-        const isHidden = addonsPanel?.classList.contains('hidden');
-        if (addonsPanel) {
-          addonsPanel.classList.toggle('hidden', !isHidden);
-          if (isHidden) {
-            settingsPanel?.classList.add('hidden');
-            openSettingsPanelBtn?.classList.remove('active');
-            const subTab = btn.dataset.addonTab;
-            if (subTab) activateAddonSubTab(subTab);
-            setActiveMenuBtn(btn);
-            addonsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            btn.classList.remove('active');
-          }
-        }
-        closeMobileSidebar();
-      }
-    });
-  });
-
-  topbarSettingsBtn?.addEventListener('click', () => toggleSettingsPanel());
-  closeSettingsPanelBtn?.addEventListener('click', () => toggleSettingsPanel(false));
-
   // Add-ons Hub Sub-Tabs
   const addonTabBtns = document.querySelectorAll('[data-addon-panel]');
   const addonPanels = document.querySelectorAll('.addon-subpanel');
@@ -145,27 +130,106 @@ export function initMenuBarAndAddons({
     );
   }
 
-  addonTabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => activateAddonSubTab(btn.dataset.addonPanel));
-  });
+  // SPA Multi-Page Router
+  let currentPage = 'studio';
 
-  openAddonsBtn?.addEventListener('click', () => {
-    if (!addonsPanel) return;
-    const willOpen = addonsPanel.classList.contains('hidden');
-    addonsPanel.classList.toggle('hidden', !willOpen);
-    openAddonsBtn.classList.toggle('active', willOpen);
-    if (willOpen) {
-      settingsPanel?.classList.add('hidden');
-      openSettingsPanelBtn?.classList.remove('active');
-      activateAddonSubTab('hooks');
-      addonsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    closeMobileSidebar();
-  });
+  function navigateToPage(pageId, { updateHash = true } = {}) {
+    const target = PAGE_META[pageId] ? pageId : 'studio';
+    currentPage = target;
 
-  closeAddonsBtn?.addEventListener('click', () => {
+    // 1. Update sidebar active highlight
+    menuBar.querySelectorAll('[data-page]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.page === target);
+    });
+    topbarSettingsBtn?.classList.toggle('active', target === 'settings');
+
+    // 2. Update top header title, badge, subtitle & Back-to-Home button
+    const meta = PAGE_META[target];
+    if (pageTitleEl) pageTitleEl.textContent = meta.title;
+    if (pageBadgeEl) pageBadgeEl.textContent = meta.badge;
+    if (pageSubEl) pageSubEl.textContent = meta.sub;
+    backToHomeBtn?.classList.toggle('hidden', target === 'studio');
+
+    // 3. Reset all page containers before showing the active page
+    studioGrid?.classList.add('hidden');
+    studioGrid?.classList.remove('page-focus-output', 'page-focus-sheet');
     addonsPanel?.classList.add('hidden');
-    openAddonsBtn?.classList.remove('active');
+    settingsPanel?.classList.add('hidden');
+
+    if (target === 'studio') {
+      // Main Home Page: Full 2-column Studio (Inputs + Ready-to-Use Results)
+      studioGrid?.classList.remove('hidden');
+      sheetConfigDrawer?.classList.add('hidden');
+      onSwitchTab?.('slides');
+    } else if (target === 'ugc-grid' || target === 'imagen' || target === 'captions') {
+      // Dedicated full-width page for UGC 4-Grid / Imagen / Captions
+      studioGrid?.classList.remove('hidden');
+      studioGrid?.classList.add('page-focus-output');
+      sheetConfigDrawer?.classList.add('hidden');
+      onSwitchTab?.(target);
+    } else if (target === 'sheet') {
+      // Dedicated full-width Google Sheet Log page
+      studioGrid?.classList.remove('hidden');
+      studioGrid?.classList.add('page-focus-sheet');
+      sheetConfigDrawer?.classList.remove('hidden');
+    } else if (target === 'hooks' || target === 'roi' || target === 'custom') {
+      // Dedicated full-width Add-on page
+      addonsPanel?.classList.remove('hidden');
+      activateAddonSubTab(target);
+    } else if (target === 'settings') {
+      // Dedicated full-width Settings page
+      settingsPanel?.classList.remove('hidden');
+      syncSettingsMirrorsFromPrimary();
+    }
+
+    if (updateHash) {
+      const nextHash = `#${target}`;
+      if (window.location.hash !== nextHash) {
+        try {
+          window.history.pushState(null, '', nextHash);
+        } catch {
+          window.location.hash = nextHash;
+        }
+      }
+    }
+
+    closeMobileSidebar();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Bind all sidebar page links
+  menuBar.querySelectorAll('[data-page]').forEach((btn) => {
+    btn.addEventListener('click', () => navigateToPage(btn.dataset.page));
+  });
+
+  // Bind Add-on sub-tabs to sync URL/sidebar highlight as well
+  addonTabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const panelId = btn.dataset.addonPanel;
+      if (PAGE_META[panelId]) {
+        navigateToPage(panelId);
+      } else {
+        activateAddonSubTab(panelId);
+      }
+    });
+  });
+
+  // Back-to-home and topbar Settings button
+  backToHomeBtn?.addEventListener('click', () => navigateToPage('studio'));
+  closeSettingsPanelBtn?.addEventListener('click', () => navigateToPage('studio'));
+  closeAddonsHubBtn?.addEventListener('click', () => navigateToPage('studio'));
+  topbarSettingsBtn?.addEventListener('click', () => {
+    navigateToPage(currentPage === 'settings' ? 'studio' : 'settings');
+  });
+
+  // Support browser Back/Forward hash navigation
+  window.addEventListener('hashchange', () => {
+    const hashPage = (window.location.hash || '').replace(/^#/, '');
+    if (PAGE_META[hashPage] && hashPage !== currentPage) {
+      navigateToPage(hashPage, { updateHash: false });
+    } else if (!hashPage && currentPage !== 'studio') {
+      navigateToPage('studio', { updateHash: false });
+    }
   });
 
   // Add-on 1: Viral Thai Hooks Library
@@ -188,7 +252,7 @@ export function initMenuBarAndAddons({
         const item = HOOK_TEMPLATES[Number(btn.dataset.hookApply)];
         if (item) {
           onApplyHookText?.(item.text);
-          onShowToast?.('เพิ่ม Hook ลงในจุดเด่นสินค้าแล้ว!', 'success');
+          onShowToast?.('เพิ่ม Hook ลงในจุดเด่นสินค้าแล้ว! (กลับหน้าหลักเพื่อกดสร้างพรอมได้เลย)', 'success');
         }
       });
     });
@@ -404,4 +468,8 @@ export function initMenuBarAndAddons({
   });
 
   syncSettingsMirrorsFromPrimary();
+
+  // Initialize starting page from URL hash (defaults to Home: studio)
+  const initialHash = (window.location.hash || '').replace(/^#/, '');
+  navigateToPage(PAGE_META[initialHash] ? initialHash : 'studio', { updateHash: false });
 }
