@@ -2476,6 +2476,62 @@ body::before {
   flex-wrap: wrap;
 }
 
+.btn-ugc-import {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(96, 165, 250, 0.36);
+  background: rgba(96, 165, 250, 0.12);
+  color: #dbeafe;
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s var(--ease-spring);
+}
+
+.btn-ugc-import:hover {
+  background: rgba(96, 165, 250, 0.22);
+  border-color: rgba(96, 165, 250, 0.6);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 18px -10px rgba(96, 165, 250, 0.45);
+}
+
+.btn-ugc-import:active {
+  transform: scale(0.97);
+}
+
+.ugc-workflow-banner {
+  margin-top: 11px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(96, 165, 250, 0.08));
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  animation: fadeIn 0.28s var(--ease-spring);
+}
+
+.ugc-workflow-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #a7f3d0;
+  margin-bottom: 5px;
+}
+
+.ugc-workflow-steps {
+  padding-left: 18px;
+  font-size: 0.72rem;
+  line-height: 1.58;
+  color: var(--text-secondary);
+}
+
+.ugc-workflow-steps strong {
+  color: var(--text-primary);
+}
+
 .ugc-status-line {
   margin-top: 9px;
   font-size: 0.74rem;
@@ -2495,6 +2551,12 @@ body::before {
   align-items: start;
 }
 
+.ugc-stage-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .ugc-image-stage {
   aspect-ratio: 1 / 1;
   width: 100%;
@@ -2505,6 +2567,40 @@ body::before {
   place-items: center;
   overflow: hidden;
   position: relative;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.22s var(--ease-spring);
+}
+
+.ugc-dropzone {
+  cursor: pointer;
+  outline: none;
+}
+
+.ugc-dropzone:hover,
+.ugc-dropzone:focus-visible,
+.ugc-dropzone.dragover {
+  border-color: rgba(96, 165, 250, 0.62);
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.ugc-dropzone.has-image {
+  border-style: solid;
+  border-color: rgba(52, 211, 153, 0.42);
+}
+
+.ugc-stage-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  animation: fadeIn 0.24s var(--ease-spring);
+}
+
+.ugc-stage-footer-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .ugc-empty-state {

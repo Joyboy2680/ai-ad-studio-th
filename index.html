@@ -585,15 +585,15 @@
                     </div>
                   </div>
 
-                  <!-- Step B: Generate Image in Gemini + Preview 1:1 -->
+                  <!-- Step B: Open Gemini Web + Copy Prompt, or API Gen, + Import & Use 1:1 Image -->
                   <div class="ugc-section-card">
                     <div class="ugc-card-head">
                       <span class="ugc-step-title">
                         <span class="step-badge step-yellow">B</span>
-                        สร้างรูปภาพ 1:1 ด้วย Gemini (แนบ Ingredient 1 อัตโนมัติถ้ามี)
+                        สร้างรูปจริงด้วย Gemini (1:1) &amp; นำรูปกลับมาใช้งาน
                       </span>
-                      <select id="ugcImageModelSelect" class="model-select-pill" aria-label="เลือกโมเดลสร้างภาพ Gemini">
-                        <option value="auto" selected>Auto (NB2 → Pro → Lite)</option>
+                      <select id="ugcImageModelSelect" class="model-select-pill" aria-label="เลือกโมเดลสร้างภาพ Gemini API">
+                        <option value="auto" selected>API Auto (NB2 → Pro → Lite)</option>
                         <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview (NB2)</option>
                         <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview (ฟอนต์ไทยคม)</option>
                         <option value="gemini-3.1-flash-lite-image">gemini-3.1-flash-lite-image</option>
@@ -602,32 +602,62 @@
                     </div>
 
                     <div class="ugc-gen-actions">
-                      <button type="button" id="ugcGenGeminiImgBtn" class="btn-ugc-primary">
+                      <button type="button" id="ugcOpenGeminiWebBtn" class="btn-ugc-primary">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
                           <rect x="3" y="3" width="18" height="18" rx="3" />
                           <circle cx="9" cy="9" r="1.7" />
                           <path d="m21 15-5-5L5 21" />
                         </svg>
-                        สร้างรูปจริงด้วย Gemini (1:1)
+                        สร้างรูปจริงด้วย Gemini ↗ (คัดลอก Prompt + เปิดเว็บ)
+                      </button>
+                      <button type="button" id="ugcImportImageBtn" class="btn-ugc-import">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        นำรูปจาก Gemini มาใช้ (เลือกไฟล์ / Ctrl+V)
+                      </button>
+                      <button type="button" id="ugcGenGeminiImgBtn" class="btn-secondary-sm" title="สั่งสร้างภาพผ่าน Gemini API โดยตรง (ต้องมี API Key ที่เปิดสิทธิ์สร้างภาพ)">
+                        เจนผ่าน API (Key)
                       </button>
                       <button type="button" id="ugcGenCanvasBtn" class="btn-secondary-sm" title="สร้างภาพตาราง 4 ช่อง 1080×1080 บนเครื่องจากรูป Ingredient 1">
-                        สร้างพรีวิว Canvas (1080×1080)
+                        พรีวิว Canvas (1080×1080)
                       </button>
+                      <input type="file" id="ugcUploadImgInput" class="ingredient-file-input" accept="image/*" />
+                    </div>
+
+                    <div id="ugcGeminiWorkflowBanner" class="ugc-workflow-banner hidden" role="status">
+                      <div class="ugc-workflow-title">✓ คัดลอก Prompt 1:1 และเปิดหน้าเว็บ Gemini (gemini.google.com) ให้แล้ว!</div>
+                      <ol class="ugc-workflow-steps">
+                        <li>กด <strong>Ctrl+V</strong> (หรือ ⌘V / วาง) ในช่องแชทของเว็บ Gemini เพื่อสร้างรูป 1:1 4 ช่อง (แนบรูปสินค้าเพิ่มได้)</li>
+                        <li>ได้รูปแล้วกด Copy Image แล้วกลับมาหน้านี้กด <strong>Ctrl+V</strong> ทันที หรือคลิก/ลากรูปล่าสุดมาวางในกรอบด้านล่างเพื่อ <strong>ส่งเข้า Drive / นำไปใช้ต่อ</strong></li>
+                      </ol>
                     </div>
 
                     <div id="ugcImageStatus" class="ugc-status-line"></div>
 
                     <div class="ugc-preview-grid">
-                      <div class="ugc-image-stage" id="ugcImageStage">
-                        <div class="ugc-empty-state" id="ugcEmptyState">
-                          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
-                            <rect x="3" y="3" width="18" height="18" rx="3" />
-                            <path d="M3 12h18M12 3v18" />
-                          </svg>
-                          <div>ยังไม่ได้สร้างรูปภาพ 1:1</div>
-                          <small>กด "สร้างรูปจริงด้วย Gemini" หรือ "สร้างพรีวิว Canvas"</small>
+                      <div class="ugc-stage-col">
+                        <div class="ugc-image-stage ugc-dropzone" id="ugcImageStage" tabindex="0" title="คลิกเพื่อเลือกรูป, ลากไฟล์มาวาง, หรือกด Ctrl+V เพื่อนำรูปจาก Gemini มาใช้">
+                          <div class="ugc-empty-state" id="ugcEmptyState">
+                            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                              <rect x="3" y="3" width="18" height="18" rx="3" />
+                              <path d="M3 12h18M12 3v18" />
+                            </svg>
+                            <div>คลิกเลือกรูป / ลากวาง / กด Ctrl+V</div>
+                            <small>นำรูปที่สร้างจากเว็บ Gemini กลับมาใส่ที่นี่เพื่อพรีวิว 1:1, ใช้งานต่อ &amp; บันทึก Drive</small>
+                          </div>
+                          <img id="ugcPreviewImg" class="ugc-preview-img hidden" alt="ภาพรีวิวสินค้า UGC 4 ช่อง 1:1" />
                         </div>
-                        <img id="ugcPreviewImg" class="ugc-preview-img hidden" alt="ภาพรีวิวสินค้า UGC 4 ช่อง 1:1" />
+
+                        <div id="ugcStageFooter" class="ugc-stage-footer hidden">
+                          <span id="ugcStageMeta" class="tech-pill green">1:1 พร้อมใช้งาน</span>
+                          <div class="ugc-stage-footer-btns">
+                            <button type="button" id="ugcChangeImgBtn" class="btn-copy-sm">เปลี่ยนรูป</button>
+                            <button type="button" id="ugcUseAsIng1Btn" class="btn-copy-sm">ส่งใช้เป็น Ingredient 1</button>
+                          </div>
+                        </div>
                       </div>
 
                       <!-- Step C: Save to Google Drive -->

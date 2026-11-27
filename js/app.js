@@ -122,11 +122,20 @@ function cacheDom() {
     'ugcCopyPromptBtn',
     'ugcPromptTextarea',
     'ugcImageModelSelect',
+    'ugcOpenGeminiWebBtn',
+    'ugcImportImageBtn',
     'ugcGenGeminiImgBtn',
     'ugcGenCanvasBtn',
+    'ugcUploadImgInput',
+    'ugcGeminiWorkflowBanner',
     'ugcImageStatus',
+    'ugcImageStage',
     'ugcEmptyState',
     'ugcPreviewImg',
+    'ugcStageFooter',
+    'ugcStageMeta',
+    'ugcChangeImgBtn',
+    'ugcUseAsIng1Btn',
     'driveMethodSelect',
     'driveFolderInput',
     'driveAppsScriptBox',
@@ -1187,8 +1196,53 @@ function setUgcImagePreview(imgObj) {
   el.ugcPreviewImg.src = imgObj.dataUrl;
   el.ugcPreviewImg.classList.remove('hidden');
   el.ugcEmptyState.classList.add('hidden');
+  if (el.ugcImageStage) el.ugcImageStage.classList.add('has-image');
+  if (el.ugcStageFooter) el.ugcStageFooter.classList.remove('hidden');
+  if (el.ugcStageMeta) {
+    const dimText =
+      imgObj.width && imgObj.height ? `${imgObj.width}×${imgObj.height}px` : '1:1';
+    const labelText = imgObj.modelId || 'Gemini Image';
+    el.ugcStageMeta.textContent = `${labelText} • ${dimText}`;
+  }
   el.ugcSaveDriveBtn.disabled = false;
   el.ugcDownloadPngBtn.disabled = false;
+}
+
+function loadImportedUgcImageFile(file, sourceLabel = 'Gemini Web (นำเข้า)') {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type.startsWith('image/')) {
+      reject(new Error('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, WebP)'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(',')[1] || '';
+      const img = new Image();
+      img.onerror = () => reject(new Error('ไฟล์รูปภาพเสียหายหรือไม่รองรับ'));
+      img.onload = () => {
+        const result = {
+          dataUrl,
+          base64,
+          mimeType: file.type || 'image/png',
+          width: img.width,
+          height: img.height,
+          modelId: sourceLabel,
+          rawFile: file
+        };
+        setUgcImagePreview(result);
+        el.ugcImageStatus.textContent = `✓ นำรูปภาพจาก ${sourceLabel} เข้ามาใช้งานแล้ว (${img.width}×${img.height}px) — พร้อมบันทึกลง Google Drive, ดาวน์โหลด หรือส่งใช้เป็น Ingredient 1`;
+        showToast(
+          `นำรูปภาพกลับมาใช้งานแล้ว (${img.width}×${img.height}px) — พร้อมบันทึกเข้า Google Drive!`,
+          'success'
+        );
+        resolve(result);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function renderDriveHistory() {
@@ -1307,8 +1361,8 @@ function initUgcGridStudio() {
       el.ugcPromptTextarea.value = res.prompt;
       el.ugcImageStatus.textContent =
         res.source === 'gemini'
-          ? `สร้าง Prompt สำเร็จด้วย ${res.promptModelId || res.analyzedBy} — กด "สร้างรูปจริงด้วย Gemini (1:1)" ได้เลย`
-          : 'สร้าง Prompt 4 ช่องเรียบร้อยแล้ว! (กด "สร้างรูปจริงด้วย Gemini" หรือ "สร้างพรีวิว Canvas")';
+          ? `สร้าง Prompt สำเร็จด้วย ${res.promptModelId || res.analyzedBy} — กด "สร้างรูปจริงด้วย Gemini ↗" เพื่อเปิดเว็บ Gemini พร้อมคัดลอก Prompt ได้เลย`
+          : 'สร้าง Prompt 4 ช่องเรียบร้อยแล้ว! กด "สร้างรูปจริงด้วย Gemini ↗" เพื่อคัดลอก Prompt + เปิดเว็บ Gemini ทันที';
       showToast('วิเคราะห์สินค้าและสร้าง Prompt 4 ช่อง 1:1 เรียบร้อยแล้ว!', 'success');
     } catch (err) {
       rebuildUgcPromptFromInputs();
@@ -1320,7 +1374,136 @@ function initUgcGridStudio() {
     }
   });
 
-  // Step B1: Generate real image via Gemini Image Generation API (Nano Banana)
+  // Step B-Primary: Copy 1:1 UGC Prompt + Open Gemini Web Ready-to-Use
+  el.ugcOpenGeminiWebBtn?.addEventListener('click', () => {
+    let prompt = el.ugcPromptTextarea.value.trim();
+    if (!prompt) {
+      rebuildUgcPromptFromInputs();
+      prompt = el.ugcPromptTextarea.value.trim();
+    }
+
+    // Synchronous clipboard fallback first so focus & gesture stay intact before opening new tab
+    let copied = false;
+    try {
+      el.ugcPromptTextarea.select();
+      copied = document.execCommand('copy');
+      window.getSelection()?.removeAllRanges();
+    } catch {
+      copied = false;
+    }
+
+    // Open Gemini Web synchronously within the click gesture so popup blockers do not block it
+    const geminiUrl = 'https://gemini.google.com/app';
+    const openedWin = window.open(geminiUrl, '_blank', 'noopener,noreferrer');
+
+    if (el.ugcGeminiWorkflowBanner) {
+      el.ugcGeminiWorkflowBanner.classList.remove('hidden');
+    }
+
+    // Also invoke modern async Clipboard API if available
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(prompt).catch(() => {});
+      copied = true;
+    }
+
+    el.ugcImageStatus.textContent = copied
+      ? '✓ คัดลอก Prompt 1:1 และเปิดหน้าเว็บ Gemini แล้ว → กด Ctrl+V วางใน Gemini เพื่อสร้างรูป แล้วนำรูปมาวาง/อัปโหลดในกรอบด้านล่างได้เลย!'
+      : '✓ เปิดหน้าเว็บ Gemini แล้ว (หากคัดลอกอัตโนมัติไม่สำเร็จ กดปุ่ม "คัดลอก Prompt" ด้านบนก่อนวางใน Gemini)';
+
+    showToast(
+      openedWin
+        ? 'คัดลอก Prompt แล้ว & เปิดเว็บ Gemini ↗ เรียบร้อย! (กด Ctrl+V วางสร้างรูปได้เลย)'
+        : 'คัดลอก Prompt แล้ว! กรุณาอนุญาต Pop-up เพื่อเปิด gemini.google.com/app',
+      openedWin ? 'success' : 'warn'
+    );
+  });
+
+  // Step B-Import: Upload / Drag-Drop / Clipboard Paste image generated from Gemini Web
+  const openFilePicker = () => el.ugcUploadImgInput?.click();
+  el.ugcImportImageBtn?.addEventListener('click', openFilePicker);
+  el.ugcChangeImgBtn?.addEventListener('click', openFilePicker);
+  el.ugcImageStage?.addEventListener('click', openFilePicker);
+  el.ugcImageStage?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openFilePicker();
+    }
+  });
+
+  el.ugcUploadImgInput?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        await loadImportedUgcImageFile(file, 'Gemini Web (อัปโหลด)');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+      e.target.value = '';
+    }
+  });
+
+  if (el.ugcImageStage) {
+    el.ugcImageStage.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      el.ugcImageStage.classList.add('dragover');
+    });
+    el.ugcImageStage.addEventListener('dragleave', () => {
+      el.ugcImageStage.classList.remove('dragover');
+    });
+    el.ugcImageStage.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      el.ugcImageStage.classList.remove('dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) {
+        try {
+          await loadImportedUgcImageFile(file, 'Gemini Web (ลากวาง)');
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      }
+    });
+  }
+
+  // Allow Ctrl+V / Cmd+V pasting an image directly when Tab 5 is active
+  document.addEventListener('paste', async (e) => {
+    if (state.activeTab !== 'ugc-grid') return;
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find((it) => it.type && it.type.startsWith('image/'));
+    if (!imgItem) return;
+    const file = imgItem.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    try {
+      await loadImportedUgcImageFile(file, 'Gemini Web (Ctrl+V)');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  // Step B-Reuse: Send the loaded 1:1 image into Ingredient 1 slot for Google Flow video prompts
+  el.ugcUseAsIng1Btn?.addEventListener('click', async () => {
+    if (!state.ugcImage?.dataUrl) return;
+    try {
+      let fileToCompress = state.ugcImage.rawFile;
+      if (!fileToCompress) {
+        const res = await fetch(state.ugcImage.dataUrl);
+        const blob = await res.blob();
+        fileToCompress = new File([blob], 'gemini-ugc-1x1.png', {
+          type: blob.type || 'image/png'
+        });
+      }
+      const compressed = await compressImageTo640(fileToCompress);
+      state.ingredient1 = compressed;
+      el.ingredient1Img.src = compressed.dataUrl;
+      el.ingredient1Badge.textContent = `${compressed.width}×${compressed.height}px • ${compressed.sizeKB} KB`;
+      el.ingredient1Slot.classList.add('has-image');
+      showToast('ส่งรูปจาก Gemini ไปใช้งานเป็น Ingredient 1 (สินค้า) เรียบร้อยแล้ว!', 'success');
+    } catch (err) {
+      showToast(`ส่งรูปไป Ingredient 1 ไม่สำเร็จ: ${err.message}`, 'error');
+    }
+  });
+
+  // Step B1: Direct Gemini API Image Generation (for users with billing/image quota API key)
   el.ugcGenGeminiImgBtn.addEventListener('click', async () => {
     const prompt = el.ugcPromptTextarea.value.trim();
     if (!prompt) {
@@ -1329,8 +1512,8 @@ function initUgcGridStudio() {
 
     const orig = el.ugcGenGeminiImgBtn.innerHTML;
     el.ugcGenGeminiImgBtn.disabled = true;
-    el.ugcGenGeminiImgBtn.textContent = 'กำลังเจนภาพ 1:1 ใน Gemini...';
-    el.ugcImageStatus.textContent = 'กำลังส่ง Prompt เข้าโมเดลสร้างภาพ Gemini (อัตราส่วน 1:1)...';
+    el.ugcGenGeminiImgBtn.textContent = 'กำลังเจนผ่าน API...';
+    el.ugcImageStatus.textContent = 'กำลังส่ง Prompt เข้าโมเดลสร้างภาพ Gemini API (อัตราส่วน 1:1)...';
 
     try {
       const imgResult = await generateUgcImageWithGemini(state.apiKey.trim(), {
