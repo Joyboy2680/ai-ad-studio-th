@@ -66,11 +66,17 @@
         </div>
 
         <nav class="sidebar-nav" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
-          <div class="sidebar-section-label">หน้าหลัก</div>
+          <div class="sidebar-section-label">ขั้นตอนหลัก</div>
           <div class="sidebar-group">
+            <button type="button" class="side-nav-item" data-page="input">
+              <span class="side-nav-icon">✨</span>
+              <span class="side-nav-label">AI Auto-Fill &amp; ข้อมูลสินค้า</span>
+              <span class="menu-badge blue">01</span>
+            </button>
             <button type="button" class="side-nav-item active" data-page="studio">
               <span class="side-nav-icon">🏠</span>
               <span class="side-nav-label">สตูดิโอผลลัพธ์พร้อมใช้งาน</span>
+              <span class="menu-badge mint">หลัก</span>
             </button>
           </div>
 
@@ -647,6 +653,9 @@
                   <h2 class="output-heading">สตูดิโอผลลัพธ์พร้อมใช้งาน</h2>
                 </div>
                 <div class="output-actions">
+                  <button type="button" id="goToInputPageBtn" class="btn-secondary-sm" title="ไปหน้า AI Auto-Fill จากลิงก์ & ข้อมูลสินค้า">
+                    ✨ กรอกลิงก์ / แก้ข้อมูล
+                  </button>
                   <button type="button" id="saveToSheetBtn" class="btn-sheet-sm" title="บันทึกข้อมูลชุดนี้เข้า Google Sheet">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
                       <rect x="3" y="3" width="18" height="18" rx="2.5" />

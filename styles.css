@@ -948,6 +948,29 @@ body.reduce-animations *::after {
 }
 
 /* Dedicated Full-Page SPA Views when selecting sidebar functions */
+.studio-grid.page-focus-input .panel-right {
+  display: none;
+}
+
+.studio-grid.page-focus-input .panel-left {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  animation: tabSlideIn 0.32s var(--ease-spring);
+}
+
+.studio-grid.page-focus-input .panel-left > .generate-card {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 960px) {
+  .studio-grid.page-focus-input .panel-left {
+    grid-template-columns: 1fr;
+  }
+}
+
 .studio-grid.page-focus-output .panel-left {
   display: none;
 }

@@ -961,6 +961,7 @@ async function handleGenerate() {
     state.currentSlide = 0;
     renderAllOutputs();
     maybeAutoLogSessionToSheet();
+    state.navigatePage?.('studio');
 
     showToast(
       hasApiKey
@@ -977,6 +978,7 @@ async function handleGenerate() {
       state.currentSlide = 0;
       renderAllOutputs();
       maybeAutoLogSessionToSheet();
+      state.navigatePage?.('studio');
       el.progressFill.style.width = '100%';
       el.progressTimer.textContent = '10.0s / 10.0s (Fallback)';
       el.progressStage.textContent =
@@ -2170,14 +2172,8 @@ function init() {
   initSlideVideoStudio();
   initUgcGridStudio();
   initGoogleSheetLogger();
-  initMenuBarAndAddons({
+  const navCtrl = initMenuBarAndAddons({
     onSwitchTab: switchTab,
-    onOpenSheetDrawer: () => {
-      el.sheetConfigDrawer?.classList.remove('hidden');
-      document
-        .querySelector('.output-header')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    },
     onApplyHookText: (hookText) => {
       state.isSamplePreload = false;
       const cur = el.productBenefitsInput?.value.trim() || '';
@@ -2186,6 +2182,7 @@ function init() {
     onExportCsv: exportAllSessionsAsCsv,
     onShowToast: showToast
   });
+  state.navigatePage = navCtrl?.navigateToPage || null;
 }
 
 function launchSlideGeminiWithPromptSync(promptText, bannerTitle, toastMessage) {

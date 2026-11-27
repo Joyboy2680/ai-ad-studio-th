@@ -27,10 +27,15 @@ export const HOOK_TEMPLATES = [
 ];
 
 const PAGE_META = {
+  input: {
+    title: 'AI Auto-Fill จากลิงก์ & ข้อมูลสินค้า',
+    badge: 'ขั้นที่ 1',
+    sub: 'วางลิงก์ดึงรูปสินค้าหลายมุม • อัปโหลด Ingredient 1+2 • เลือกโหมด Google Flow & แนวคลิป 10 วิ'
+  },
   studio: {
     title: 'สตูดิโอผลลัพธ์พร้อมใช้งาน',
     badge: 'หน้าหลัก',
-    sub: 'สร้างพรอมภาพนิ่ง Imagen & คลิปขายของ 10 วิ • เชื่อม Gemini / Drive / Sheet'
+    sub: 'สไลด์คลิป 10 วิ • พรอมภาพนิ่ง Imagen • แคปชั่น & # • ไทม์ไลน์ • ภาพ UGC 4 ช่อง'
   },
   'ugc-grid': {
     title: 'สร้างภาพสินค้า UGC ตาราง 4 ช่อง (1:1)',
@@ -93,6 +98,7 @@ export function initMenuBarAndAddons({
   const hooksGrid = document.getElementById('addonHooksGrid');
 
   const backToHomeBtn = document.getElementById('backToHomeBtn');
+  const goToInputPageBtn = document.getElementById('goToInputPageBtn');
   const topbarSettingsBtn = document.getElementById('topbarSettingsBtn');
   const closeSettingsPanelBtn = document.getElementById('closeSettingsPanelBtn');
   const closeAddonsHubBtn = document.getElementById('closeAddonsHubBtn');
@@ -101,7 +107,7 @@ export function initMenuBarAndAddons({
   const pageSubEl = document.getElementById('workspacePageSub');
   const customContainer = document.getElementById('customMenuSlots');
 
-  if (!menuBar) return;
+  if (!menuBar) return { navigateToPage: () => {} };
 
   // Mobile Off-Canvas Sidebar Helpers
   const openMobileSidebar = () => {
@@ -152,13 +158,19 @@ export function initMenuBarAndAddons({
 
     // 3. Reset all page containers before showing the active page
     studioGrid?.classList.add('hidden');
-    studioGrid?.classList.remove('page-focus-output', 'page-focus-sheet');
+    studioGrid?.classList.remove('page-focus-input', 'page-focus-output', 'page-focus-sheet');
     addonsPanel?.classList.add('hidden');
     settingsPanel?.classList.add('hidden');
 
-    if (target === 'studio') {
-      // Main Home Page: Full 2-column Studio (Inputs + Ready-to-Use Results)
+    if (target === 'input') {
+      // Dedicated full-width Input & AI Auto-Fill page (Step 1 before Studio Results)
       studioGrid?.classList.remove('hidden');
+      studioGrid?.classList.add('page-focus-input');
+      sheetConfigDrawer?.classList.add('hidden');
+    } else if (target === 'studio') {
+      // Main Home Page: Dedicated clean full-width Studio Results workspace
+      studioGrid?.classList.remove('hidden');
+      studioGrid?.classList.add('page-focus-output');
       sheetConfigDrawer?.classList.add('hidden');
       onSwitchTab?.('slides');
     } else if (target === 'ugc-grid' || target === 'imagen' || target === 'captions') {
@@ -214,7 +226,8 @@ export function initMenuBarAndAddons({
     });
   });
 
-  // Back-to-home and topbar Settings button
+  // Quick-jump buttons
+  goToInputPageBtn?.addEventListener('click', () => navigateToPage('input'));
   backToHomeBtn?.addEventListener('click', () => navigateToPage('studio'));
   closeSettingsPanelBtn?.addEventListener('click', () => navigateToPage('studio'));
   closeAddonsHubBtn?.addEventListener('click', () => navigateToPage('studio'));
@@ -472,4 +485,6 @@ export function initMenuBarAndAddons({
   // Initialize starting page from URL hash (defaults to Home: studio)
   const initialHash = (window.location.hash || '').replace(/^#/, '');
   navigateToPage(PAGE_META[initialHash] ? initialHash : 'studio', { updateHash: false });
+
+  return { navigateToPage };
 }
