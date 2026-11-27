@@ -52,6 +52,7 @@ const state = {
   isGenerating: false,
   plan: null,
   ugcImage: null, // { dataUrl, base64, mimeType, modelId }
+  slideVideo: null, // { objectUrl, file, name, sizeMB }
   driveHistory: [],
   isSamplePreload: false,
   lastPrefetchedUrl: ''
@@ -112,6 +113,20 @@ function cacheDom() {
     'carouselViewport',
     'carouselTrack',
     'carouselDots',
+    'openGeminiActiveShotBtn',
+    'openGeminiFullClipBtn',
+    'slideVideoImportBtn',
+    'slideVideoInput',
+    'slideGeminiWorkflowBanner',
+    'slideGeminiBannerTitle',
+    'slideVideoMeta',
+    'slideVideoStage',
+    'slideVideoEmpty',
+    'slideVideoPreview',
+    'slideVideoActions',
+    'slideVideoChangeBtn',
+    'slideVideoDownloadBtn',
+    'slideVideoDriveBtn',
     'imagenContainer',
     'captionsContainer',
     'timelineVisualBar',
@@ -904,9 +919,14 @@ function renderSlidesTab() {
                 <span class="g-dots"><span></span><span></span><span></span><span></span></span>
                 Google Flow Prompt (${escapeHtml(state.plan.flowMode.toUpperCase())})
               </span>
-              <button type="button" class="btn-copy-sm" data-copy-slide="${i}">
-                คัดลอกพรอมช็อตนี้
-              </button>
+              <div class="prompt-box-actions">
+                <button type="button" class="btn-gemini-sm" data-gemini-slide="${i}">
+                  เข้าเว็บ Gemini ↗ (สร้างวิดีโอ)
+                </button>
+                <button type="button" class="btn-copy-sm" data-copy-slide="${i}">
+                  คัดลอกพรอมช็อตนี้
+                </button>
+              </div>
             </div>
             <div class="prompt-box-content">${escapeHtml(s.prompt)}</div>
           </div>
@@ -938,6 +958,20 @@ function renderSlidesTab() {
     `
     )
     .join('');
+
+  el.carouselTrack.querySelectorAll('[data-gemini-slide]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.geminiSlide);
+      const slide = state.plan.slides[idx];
+      if (slide) {
+        launchSlideGeminiWithPromptSync(
+          slide.prompt,
+          `✓ คัดลอก Prompt Shot ${idx + 1} (${slide.timecode}) และเปิดหน้าเว็บ Gemini (gemini.google.com) ให้แล้ว!`,
+          `คัดลอก Prompt วิดีโอ Shot ${idx + 1} (${slide.timecode}) แล้ว & เปิดเว็บ Gemini ↗ เรียบร้อย!`
+        );
+      }
+    });
+  });
 
   el.carouselTrack.querySelectorAll('[data-copy-slide]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1965,7 +1999,271 @@ function init() {
   loadSampleProduct('serum', true);
   state.plan = buildLocalStudioPlan(collectInputPayload());
   renderAllOutputs();
+  initSlideVideoStudio();
   initUgcGridStudio();
+}
+
+function launchSlideGeminiWithPromptSync(promptText, bannerTitle, toastMessage) {
+  const cleanPrompt = (promptText || '').trim();
+  if (!cleanPrompt) {
+    showToast('ยังไม่มี Prompt วิดีโอ กรุณากดสร้างพรอม 10 วิก่อน', 'warn');
+    return;
+  }
+
+  // Copy synchronously via temporary textarea before calling window.open so user gesture persists
+  let copied = false;
+  try {
+    const tmp = document.createElement('textarea');
+    tmp.value = cleanPrompt;
+    tmp.setAttribute('readonly', '');
+    tmp.style.position = 'fixed';
+    tmp.style.opacity = '0';
+    tmp.style.left = '-9999px';
+    document.body.appendChild(tmp);
+    tmp.select();
+    copied = document.execCommand('copy');
+    tmp.remove();
+  } catch {
+    copied = false;
+  }
+
+  const openedWin = window.open(
+    'https://gemini.google.com/app',
+    '_blank',
+    'noopener,noreferrer'
+  );
+
+  if (el.slideGeminiWorkflowBanner) {
+    el.slideGeminiWorkflowBanner.classList.remove('hidden');
+  }
+  if (el.slideGeminiBannerTitle && bannerTitle) {
+    el.slideGeminiBannerTitle.textContent = bannerTitle;
+  }
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(cleanPrompt).catch(() => {});
+    copied = true;
+  }
+
+  if (openedWin) {
+    showToast(
+      copied
+        ? toastMessage || 'คัดลอก Prompt วิดีโอ & เปิดเว็บ Gemini ↗ เรียบร้อย!'
+        : 'เปิดเว็บ Gemini ↗ แล้ว กรุณากดคัดลอก Prompt เพื่อวางสร้างวิดีโอ',
+      'success'
+    );
+  } else {
+    showToast(
+      'คัดลอก Prompt วิดีโอแล้ว! กรุณาอนุญาต Pop-up เพื่อเปิด gemini.google.com/app',
+      'warn'
+    );
+  }
+}
+
+function buildFull10sVideoPrompt() {
+  const p = state.plan;
+  if (!p?.slides?.length) return '';
+  const header = [
+    `Create a cohesive 10-second vertical/commercial product video (${p.aspectRatio || '9:16'}) for "${p.productName}" in style: ${p.clipStyleName}.`,
+    p.lockCharacter && p.characterAnchor
+      ? `STRICT VISUAL CONTINUITY LOCK: ${p.characterAnchor}. Keep exact product, lighting, and tone consistent across all 10 seconds.`
+      : ''
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const shots = p.slides
+    .map(
+      (s, i) =>
+        `Shot ${i + 1} [${s.timecode}] (${s.title}):\n${s.prompt}\nThai Voiceover: "${s.voiceover}" | Camera: ${s.camera}`
+    )
+    .join('\n\n');
+
+  return `${header}\n\n${shots}`;
+}
+
+function loadSlideVideoFile(file, sourceLabel = 'Gemini Video') {
+  if (!file || !file.type.startsWith('video/')) {
+    showToast('กรุณาเลือกไฟล์วิดีโอ (.mp4, .webm, .mov)', 'error');
+    return;
+  }
+
+  if (state.slideVideo?.objectUrl) {
+    URL.revokeObjectURL(state.slideVideo.objectUrl);
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  state.slideVideo = {
+    objectUrl,
+    file,
+    name: file.name,
+    sizeMB
+  };
+
+  el.slideVideoPreview.src = objectUrl;
+  el.slideVideoPreview.classList.remove('hidden');
+  el.slideVideoEmpty.classList.add('hidden');
+  el.slideVideoStage.classList.add('has-video');
+  el.slideVideoActions.classList.remove('hidden');
+  el.slideVideoMeta.className = 'tech-pill green';
+  el.slideVideoMeta.textContent = `${sourceLabel} • ${sizeMB} MB`;
+
+  el.slideVideoPreview.addEventListener(
+    'loadedmetadata',
+    () => {
+      const dur = Number.isFinite(el.slideVideoPreview.duration)
+        ? `${el.slideVideoPreview.duration.toFixed(1)}s`
+        : '10s';
+      const dims =
+        el.slideVideoPreview.videoWidth && el.slideVideoPreview.videoHeight
+          ? `${el.slideVideoPreview.videoWidth}×${el.slideVideoPreview.videoHeight}`
+          : '';
+      el.slideVideoMeta.textContent = [sourceLabel, dur, dims, `${sizeMB} MB`]
+        .filter(Boolean)
+        .join(' • ');
+    },
+    { once: true }
+  );
+
+  showToast(
+    `นำวิดีโอ "${file.name}" เข้ามาใช้งานแล้ว (${sizeMB} MB) — กดเล่นพรีวิวหรือส่งเข้า Drive ได้เลย`,
+    'success'
+  );
+}
+
+function initSlideVideoStudio() {
+  el.openGeminiActiveShotBtn?.addEventListener('click', () => {
+    const idx = state.currentSlide || 0;
+    const slide = state.plan?.slides?.[idx];
+    if (!slide) {
+      showToast('ยังไม่มีข้อมูลสไลด์ กรุณากดสร้างพรอม 10 วิก่อน', 'warn');
+      return;
+    }
+    launchSlideGeminiWithPromptSync(
+      slide.prompt,
+      `✓ คัดลอก Prompt Shot ${idx + 1} (${slide.timecode}) และเปิดหน้าเว็บ Gemini (gemini.google.com) ให้แล้ว!`,
+      `คัดลอก Prompt ช็อต ${idx + 1} (${slide.timecode}) แล้ว & เปิดเว็บ Gemini ↗ เรียบร้อย!`
+    );
+  });
+
+  el.openGeminiFullClipBtn?.addEventListener('click', () => {
+    const fullPrompt = buildFull10sVideoPrompt();
+    launchSlideGeminiWithPromptSync(
+      fullPrompt,
+      '✓ คัดลอก Prompt วิดีโอครบ 4 ช็อต (0–10 วิ) และเปิดหน้าเว็บ Gemini ให้แล้ว!',
+      'คัดลอก Prompt คลิป 10 วิ ครบ 4 ช็อตแล้ว & เปิดเว็บ Gemini ↗ เรียบร้อย!'
+    );
+  });
+
+  const openVideoPicker = () => el.slideVideoInput?.click();
+  el.slideVideoImportBtn?.addEventListener('click', openVideoPicker);
+  el.slideVideoChangeBtn?.addEventListener('click', openVideoPicker);
+  el.slideVideoStage?.addEventListener('click', () => {
+    if (!state.slideVideo) openVideoPicker();
+  });
+  el.slideVideoStage?.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && !state.slideVideo) {
+      e.preventDefault();
+      openVideoPicker();
+    }
+  });
+
+  el.slideVideoInput?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) loadSlideVideoFile(file, 'Gemini Web (.mp4)');
+    e.target.value = '';
+  });
+
+  if (el.slideVideoStage) {
+    el.slideVideoStage.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      el.slideVideoStage.classList.add('dragover');
+    });
+    el.slideVideoStage.addEventListener('dragleave', () => {
+      el.slideVideoStage.classList.remove('dragover');
+    });
+    el.slideVideoStage.addEventListener('drop', (e) => {
+      e.preventDefault();
+      el.slideVideoStage.classList.remove('dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) loadSlideVideoFile(file, 'Gemini Web (ลากวาง)');
+    });
+  }
+
+  el.slideVideoDownloadBtn?.addEventListener('click', () => {
+    if (!state.slideVideo?.objectUrl) return;
+    const safeName = (state.plan?.productName || 'ai-ad-video-10s')
+      .replace(/[^a-zA-Z0-9ก-๙_-]+/g, '-')
+      .slice(0, 32);
+    const a = document.createElement('a');
+    a.href = state.slideVideo.objectUrl;
+    a.download = state.slideVideo.name || `${safeName}-10s.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('ดาวน์โหลดไฟล์วิดีโอ 10 วิ แล้ว', 'success');
+  });
+
+  el.slideVideoDriveBtn?.addEventListener('click', async () => {
+    if (!state.slideVideo?.file) return;
+    const orig = el.slideVideoDriveBtn.innerHTML;
+    el.slideVideoDriveBtn.disabled = true;
+    el.slideVideoDriveBtn.textContent = 'กำลังอัปโหลดวิดีโอเข้า Drive...';
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์วิดีโอได้'));
+        reader.readAsDataURL(state.slideVideo.file);
+      });
+      const base64 = String(dataUrl).split(',')[1] || '';
+      const method = el.driveMethodSelect?.value || 'apps-script';
+      const folderName =
+        el.driveFolderInput?.value.trim() || 'AI Ad Studio TH - UGC Images';
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const safeName = (state.plan?.productName || 'video-10s')
+        .replace(/[^a-zA-Z0-9ก-๙_-]+/g, '-')
+        .slice(0, 32);
+      const filename = `${safeName}-10s-${stamp}.mp4`;
+
+      const uploaded =
+        method === 'oauth'
+          ? await uploadViaOAuthDrive({
+              clientId: el.driveClientIdInput?.value.trim(),
+              base64,
+              mimeType: state.slideVideo.file.type || 'video/mp4',
+              filename,
+              folderName
+            })
+          : await uploadViaAppsScript({
+              webhookUrl: el.driveWebhookInput?.value.trim(),
+              base64,
+              mimeType: state.slideVideo.file.type || 'video/mp4',
+              filename,
+              folderName
+            });
+
+      state.driveHistory.unshift({
+        fileName: uploaded.fileName,
+        webViewLink: uploaded.webViewLink,
+        savedAt: new Date().toISOString()
+      });
+      state.driveHistory = state.driveHistory.slice(0, 10);
+      localStorage.setItem(STORAGE_DRIVE_HISTORY, JSON.stringify(state.driveHistory));
+      renderDriveHistory();
+      showToast(`บันทึกวิดีโอเข้า Google Drive (${uploaded.fileName}) สำเร็จ!`, 'success');
+    } catch (err) {
+      showToast(
+        `${err.message} (ตั้งค่า Google Drive Webhook/OAuth ได้ที่แท็บ ภาพ UGC 4 ช่อง → ขั้นตอน C)`,
+        'warn'
+      );
+    } finally {
+      el.slideVideoDriveBtn.disabled = false;
+      el.slideVideoDriveBtn.innerHTML = orig;
+    }
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

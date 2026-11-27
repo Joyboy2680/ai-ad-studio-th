@@ -489,6 +489,63 @@
                 </div>
 
                 <div class="carousel-footer-dots" id="carouselDots"></div>
+
+                <!-- Launch Gemini Web Ready-to-Use & Bring Video Back -->
+                <div class="slide-gemini-bar" id="slideGeminiBar">
+                  <button type="button" id="openGeminiActiveShotBtn" class="btn-ugc-primary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                      <polygon points="6 3 20 12 6 21 6 3" />
+                    </svg>
+                    เข้าเว็บ Gemini สร้างวิดีโอช็อตนี้ ↗ (คัดลอก Prompt)
+                  </button>
+                  <button type="button" id="openGeminiFullClipBtn" class="btn-ugc-import">
+                    คัดลอกครบ 4 ช็อต (10 วิ) + เปิด Gemini ↗
+                  </button>
+                  <button type="button" id="slideVideoImportBtn" class="btn-secondary-sm">
+                    นำวิดีโอจาก Gemini มาใช้ (.mp4)
+                  </button>
+                  <input type="file" id="slideVideoInput" class="ingredient-file-input" accept="video/*" />
+                </div>
+
+                <div id="slideGeminiWorkflowBanner" class="ugc-workflow-banner hidden" role="status">
+                  <div class="ugc-workflow-title" id="slideGeminiBannerTitle">
+                    ✓ คัดลอก Prompt วิดีโอและเปิดหน้าเว็บ Gemini (gemini.google.com) ให้แล้ว!
+                  </div>
+                  <ol class="ugc-workflow-steps">
+                    <li>กด <strong>Ctrl+V</strong> (หรือ ⌘V) วาง Prompt ในช่องแชทของ Gemini แล้วกดเลือกโหมด <strong>Video / Veo</strong> (แนบรูป Ingredient 1+2 เพิ่มได้)</li>
+                    <li>ได้คลิปจาก Gemini แล้ว ดาวน์โหลดเป็น <code>.mp4</code> แล้วคลิกหรือลากไฟล์มาวางในกรอบ <strong>นำวิดีโอจาก Gemini มาใช้</strong> ด้านล่างได้เลย</li>
+                  </ol>
+                </div>
+
+                <div class="slide-video-card">
+                  <div class="slide-video-head">
+                    <span class="ugc-step-title">
+                      <span class="step-badge step-blue">▶</span>
+                      นำวิดีโอที่สร้างจาก Gemini กลับมาใช้งาน (10 วิ)
+                    </span>
+                    <span id="slideVideoMeta" class="tech-pill">รอวิดีโอ .mp4 / .webm</span>
+                  </div>
+
+                  <div id="slideVideoStage" class="slide-video-stage ugc-dropzone" tabindex="0" title="คลิกเพื่อเลือกไฟล์วิดีโอ หรือลากไฟล์ .mp4 จาก Gemini มาวางที่นี่">
+                    <div id="slideVideoEmpty" class="ugc-empty-state">
+                      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                        <rect x="2" y="5" width="15" height="14" rx="2.5" />
+                        <path d="m17 10 5-3v10l-5-3z" />
+                      </svg>
+                      <div>คลิกเลือกไฟล์ หรือลากวิดีโอ (.mp4 / .webm) มาวางที่นี่</div>
+                      <small>เปิดพรีวิวคลิปที่สร้างจาก Gemini เช็กจังหวะ 10 วิ • ดาวน์โหลด • ส่งเข้า Google Drive</small>
+                    </div>
+                    <video id="slideVideoPreview" class="slide-video-player hidden" controls playsinline loop></video>
+                  </div>
+
+                  <div id="slideVideoActions" class="slide-video-actions hidden">
+                    <button type="button" id="slideVideoChangeBtn" class="btn-copy-sm">เปลี่ยนวิดีโอ</button>
+                    <button type="button" id="slideVideoDownloadBtn" class="btn-secondary-sm">↓ ดาวน์โหลดวิดีโอ</button>
+                    <button type="button" id="slideVideoDriveBtn" class="btn-drive-save">
+                      บันทึกลง Google Drive
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <!-- TAB 2: 3 Imagen Still Prompts -->
