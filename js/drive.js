@@ -10,14 +10,48 @@ export const STORAGE_DRIVE_CLIENT_ID = 'ai_ad_studio_th_drive_client_id';
 export const STORAGE_DRIVE_FOLDER = 'ai_ad_studio_th_drive_folder';
 export const STORAGE_DRIVE_HISTORY = 'ai_ad_studio_th_drive_history';
 
+export const STORAGE_SHEET_URL = 'ai_ad_studio_th_sheet_url';
+export const STORAGE_SHEET_TAB = 'ai_ad_studio_th_sheet_tab';
+export const STORAGE_SHEET_AUTOLOG = 'ai_ad_studio_th_sheet_autolog';
+export const STORAGE_SHEET_HISTORY = 'ai_ad_studio_th_sheet_history';
+
 /**
  * Ready-to-use Google Apps Script code that users can paste into script.new
  * and deploy as a Web App ("Execute as: Me", "Who has access: Anyone")
- * to save generated product images directly into Google Drive.
+ * to BOTH save generated images/videos to Google Drive AND log every session to Google Sheets.
  */
 export const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
+
+    // 1) Google Sheet Session Logging Mode
+    if (payload.action === 'log_sheet') {
+      var ss = getOrCreateSpreadsheet_(payload.sheetUrl, payload.defaultSheetName || 'AI Ad Studio TH - Logs');
+      var tabName = (payload.sheetTab || 'Studio Logs').trim();
+      var sheet = ss.getSheetByName(tabName) || ss.insertSheet(tabName);
+
+      if (sheet.getLastRow() === 0 && payload.headers && payload.headers.length) {
+        sheet.appendRow(payload.headers);
+        var hdrRange = sheet.getRange(1, 1, 1, payload.headers.length);
+        hdrRange.setFontWeight('bold').setBackground('#18181b').setFontColor('#f4f4f5');
+        sheet.setFrozenRows(1);
+      }
+
+      if (payload.rowValues && payload.rowValues.length) {
+        sheet.appendRow(payload.rowValues);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        ok: true,
+        action: 'log_sheet',
+        spreadsheetId: ss.getId(),
+        sheetName: sheet.getName(),
+        sheetUrl: ss.getUrl(),
+        rowNumber: sheet.getLastRow()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 2) Google Drive File Upload Mode (Images & Videos)
     var folderName = payload.folderName || 'AI Ad Studio TH - UGC Images';
     var folders = DriveApp.getFoldersByName(folderName);
     var folder = folders.hasNext() ? folders.next() : DriveApp.createFolder(folderName);
@@ -26,19 +60,41 @@ export const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
     var blob = Utilities.newBlob(bytes, payload.mimeType || 'image/png', payload.filename || 'ugc-4grid.png');
     var file = folder.createFile(blob);
 
-    var out = {
+    return ContentService.createTextOutput(JSON.stringify({
       ok: true,
+      action: 'upload_drive',
       fileId: file.getId(),
       fileName: file.getName(),
       webViewLink: file.getUrl(),
       folderUrl: folder.getUrl()
-    };
-    return ContentService.createTextOutput(JSON.stringify(out))
-      .setMimeType(ContentService.MimeType.JSON);
+    })).setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function getOrCreateSpreadsheet_(sheetUrlOrId, defaultName) {
+  var raw = (sheetUrlOrId || '').trim();
+  if (raw) {
+    var match = raw.match(/\\/d\\/([a-zA-Z0-9-_]+)/);
+    var id = match ? match[1] : raw;
+    return SpreadsheetApp.openById(id);
+  }
+  var props = PropertiesService.getScriptProperties();
+  var savedId = props.getProperty('DEFAULT_SHEET_ID');
+  if (savedId) {
+    try { return SpreadsheetApp.openById(savedId); } catch (e) {}
+  }
+  var files = DriveApp.getFilesByName(defaultName);
+  if (files.hasNext()) {
+    var f = files.next();
+    props.setProperty('DEFAULT_SHEET_ID', f.getId());
+    return SpreadsheetApp.openById(f.getId());
+  }
+  var created = SpreadsheetApp.create(defaultName);
+  props.setProperty('DEFAULT_SHEET_ID', created.getId());
+  return created;
 }`;
 
 /**
@@ -233,3 +289,100 @@ export async function uploadViaOAuthDrive({
     method: 'Drive OAuth API'
   };
 }
+
+export const SHEET_HEADERS = [
+  'วัน-เวลา',
+  'ชื่อสินค้า',
+  'ลิงก์สินค้า',
+  'จุดเด่น / สรรพคุณ',
+  'ราคา / โปรโมชัน',
+  'กลุ่มเป้าหมาย',
+  'โหมด Google Flow',
+  'สไตล์คลิป (10 วิ)',
+  'ล็อกตัวละคร',
+  'Shot 1 (0–2s)',
+  'Shot 2 (2–5s)',
+  'Shot 3 (5–8s)',
+  'Shot 4 (8–10s)',
+  'Imagen Prompts (3 ช็อต)',
+  'แคปชั่น & แฮชแท็ก',
+  'UGC 4-Panel 1:1 Prompt',
+  'ลิงก์ไฟล์ Drive ล่าสุด',
+  'Engine / โมเดล'
+];
+
+/**
+ * Appends a structured session row into Google Sheets via the shared Apps Script Web App URL.
+ */
+export async function logToGoogleSheetViaAppsScript({
+  webhookUrl,
+  sheetUrl = '',
+  sheetTab = 'Studio Logs',
+  rowValues
+}) {
+  const cleanUrl = (webhookUrl || '').trim();
+  if (!cleanUrl || !cleanUrl.startsWith('https://')) {
+    throw new Error('กรุณาวาง URL ของ Google Apps Script Web App (ขึ้นต้นด้วย https://)');
+  }
+
+  const res = await fetch(cleanUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'log_sheet',
+      sheetUrl: (sheetUrl || '').trim(),
+      sheetTab: (sheetTab || 'Studio Logs').trim(),
+      defaultSheetName: 'AI Ad Studio TH - Logs',
+      headers: SHEET_HEADERS,
+      rowValues
+    })
+  });
+
+  const text = await res.text();
+  let data = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(
+      'Apps Script ไม่ได้ส่งค่า JSON กลับมา กรุณาตรวจว่า Deploy เป็น "Web app" และตั้ง Who has access = "Anyone"'
+    );
+  }
+
+  if (!data?.ok) {
+    const errMsg = String(data?.error || 'บันทึกเข้า Google Sheet ไม่สำเร็จ');
+    if (errMsg.toLowerCase().includes('empty') || errMsg.toLowerCase().includes('undefined')) {
+      throw new Error(
+        'Apps Script ของคุณเป็นเวอร์ชันเก่า — กรุณาอัปเดตโค้ดใหม่จากปุ่ม "ดูโค้ด Apps Script" แล้ว Deploy ใหม่'
+      );
+    }
+    throw new Error(errMsg);
+  }
+
+  return {
+    spreadsheetId: data.spreadsheetId || '',
+    sheetName: data.sheetName || sheetTab,
+    sheetUrl: data.sheetUrl || sheetUrl || '',
+    rowNumber: data.rowNumber || 0
+  };
+}
+
+/**
+ * Converts stored session records into a UTF-8 BOM CSV string ready to open in Google Sheets / Excel.
+ */
+export function buildSessionsCsv(records = []) {
+  const escapeCell = (val) => {
+    const str = String(val ?? '');
+    if (/[",\n\r]/.test(str)) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+  const lines = [
+    SHEET_HEADERS.map(escapeCell).join(','),
+    ...records.map((rec) =>
+      (Array.isArray(rec.rowValues) ? rec.rowValues : []).map(escapeCell).join(',')
+    )
+  ];
+  return '\uFEFF' + lines.join('\r\n');
+}
+

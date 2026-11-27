@@ -387,6 +387,16 @@
                   <h2 class="output-heading">สตูดิโอผลลัพธ์พร้อมใช้งาน</h2>
                 </div>
                 <div class="output-actions">
+                  <button type="button" id="saveToSheetBtn" class="btn-sheet-sm" title="บันทึกข้อมูลชุดนี้เข้า Google Sheet">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                      <rect x="3" y="3" width="18" height="18" rx="2.5" />
+                      <path d="M3 9h18M9 21V9" />
+                    </svg>
+                    Google Sheet
+                  </button>
+                  <button type="button" id="toggleSheetConfigBtn" class="btn-secondary-sm" title="ตั้งค่า Google Sheet / ดูประวัติที่บันทึก">
+                    ตั้งค่า Sheet <span id="sheetSavedCount" class="sheet-count-badge">0</span>
+                  </button>
                   <button type="button" id="exportTxtBtn" class="btn-secondary-sm" title="ดาวน์โหลดไฟล์ .txt">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                       <path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
@@ -403,6 +413,79 @@
                 </div>
               </div>
               <div class="output-meta-chips" id="outputMetaChips"></div>
+
+              <!-- Collapsible Google Sheet Session Logger Drawer -->
+              <div id="sheetConfigDrawer" class="sheet-drawer hidden">
+                <div class="sheet-drawer-head">
+                  <div class="ugc-step-title">
+                    <span class="step-badge step-green">S</span>
+                    <span>เก็บประวัติข้อมูลลง Google Sheet ทุกครั้ง (18 คอลัมน์อัตโนมัติ)</span>
+                  </div>
+                  <label class="sheet-autolog-label">
+                    <input type="checkbox" id="autoSaveSheetToggle" />
+                    <span>บันทึกอัตโนมัติทุกครั้งที่กด "สร้างพรอม"</span>
+                  </label>
+                </div>
+
+                <div class="sheet-fields-grid">
+                  <div class="field-group">
+                    <label class="field-label" for="sheetWebhookInput">
+                      <span>Apps Script Web App URL (ใช้ร่วมกับ Drive ได้เลย)</span>
+                      <button type="button" id="toggleSheetScriptBtn" class="link-btn-inline">
+                        ดูโค้ด Apps Script (Sheet+Drive)
+                      </button>
+                    </label>
+                    <input
+                      type="url"
+                      id="sheetWebhookInput"
+                      class="field-input mono"
+                      placeholder="https://script.google.com/macros/s/.../exec"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label class="field-label" for="sheetUrlInput">
+                      <span>ลิงก์ Google Sheet (ไม่ใส่ = สร้างชีตใหม่ให้อัตโนมัติ)</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="sheetUrlInput"
+                      class="field-input mono"
+                      placeholder="https://docs.google.com/spreadsheets/d/... หรือปล่อยว่าง"
+                    />
+                  </div>
+                  <div class="field-group">
+                    <label class="field-label" for="sheetTabInput">ชื่อแท็บ (Sheet Tab)</label>
+                    <input type="text" id="sheetTabInput" class="field-input" value="Studio Logs" />
+                  </div>
+                </div>
+
+                <div id="sheetScriptDrawer" class="apps-script-drawer hidden">
+                  <div class="apps-script-steps">
+                    1. เปิด <a href="https://script.new" target="_blank" rel="noopener noreferrer">script.new ↗</a> แล้ววางโค้ดนี้ (รองรับทั้ง Google Sheet และ Google Drive ใน URL เดียว)<br />
+                    2. กด <strong>Deploy → New deployment → Web app</strong> ตั้ง <strong>Execute as: Me</strong> และ <strong>Who has access: Anyone</strong><br />
+                    3. นำ URL (<code>.../exec</code>) มาวางช่องด้านบน (ถ้าเคย Deploy อันเก่าไว้ ให้อัปเดตโค้ดใหม่ก่อนนะครับ)
+                  </div>
+                  <div class="prompt-box">
+                    <div class="prompt-box-header">
+                      <span class="prompt-box-label">Code.gs (Google Sheet + Drive All-in-One)</span>
+                      <button type="button" id="copySheetScriptBtn" class="btn-copy-sm">คัดลอกโค้ด</button>
+                    </div>
+                    <pre class="prompt-box-content" id="sheetScriptCodePreview"></pre>
+                  </div>
+                </div>
+
+                <div class="sheet-actions-row">
+                  <button type="button" id="sheetSaveNowBtn" class="btn-drive-save">
+                    📊 บันทึกข้อมูลรอบนี้ลง Google Sheet
+                  </button>
+                  <button type="button" id="exportCsvBtn" class="btn-secondary-sm" title="ดาวน์โหลดไฟล์ .CSV ประวัติทั้งหมดที่เก็บในเครื่อง (เปิดด้วย Google Sheet / Excel ได้ทันที)">
+                    ↓ .CSV ประวัติทั้งหมด
+                  </button>
+                </div>
+
+                <div id="sheetSaveResult" class="drive-result-box"></div>
+                <div id="sheetHistoryList" class="drive-history-list"></div>
+              </div>
             </div>
 
             <!-- 5 Segmented Glass Navigation Tabs -->

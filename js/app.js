@@ -20,10 +20,16 @@ import {
   APPS_SCRIPT_TEMPLATE,
   uploadViaAppsScript,
   uploadViaOAuthDrive,
+  logToGoogleSheetViaAppsScript,
+  buildSessionsCsv,
   STORAGE_DRIVE_WEBHOOK,
   STORAGE_DRIVE_CLIENT_ID,
   STORAGE_DRIVE_FOLDER,
-  STORAGE_DRIVE_HISTORY
+  STORAGE_DRIVE_HISTORY,
+  STORAGE_SHEET_URL,
+  STORAGE_SHEET_TAB,
+  STORAGE_SHEET_AUTOLOG,
+  STORAGE_SHEET_HISTORY
 } from './drive.js';
 import { renderUgc4GridCanvas } from './ugc-canvas.js';
 
@@ -54,6 +60,8 @@ const state = {
   ugcImage: null, // { dataUrl, base64, mimeType, modelId }
   slideVideo: null, // { objectUrl, file, name, sizeMB }
   driveHistory: [],
+  sheetHistory: [],
+  autoSaveSheet: false,
   isSamplePreload: false,
   lastPrefetchedUrl: ''
 };
@@ -99,6 +107,22 @@ function cacheDom() {
     'progressTimer',
     'progressFill',
     'outputMetaChips',
+    'saveToSheetBtn',
+    'toggleSheetConfigBtn',
+    'sheetSavedCount',
+    'sheetConfigDrawer',
+    'autoSaveSheetToggle',
+    'sheetWebhookInput',
+    'toggleSheetScriptBtn',
+    'sheetUrlInput',
+    'sheetTabInput',
+    'sheetScriptDrawer',
+    'copySheetScriptBtn',
+    'sheetScriptCodePreview',
+    'sheetSaveNowBtn',
+    'exportCsvBtn',
+    'sheetSaveResult',
+    'sheetHistoryList',
     'copyAllBtn',
     'exportTxtBtn',
     'tabsNav',
@@ -802,6 +826,7 @@ async function handleGenerate() {
     state.plan = plan;
     state.currentSlide = 0;
     renderAllOutputs();
+    maybeAutoLogSessionToSheet();
 
     showToast(
       hasApiKey
@@ -817,6 +842,7 @@ async function handleGenerate() {
       state.plan = fallbackPlan;
       state.currentSlide = 0;
       renderAllOutputs();
+      maybeAutoLogSessionToSheet();
       el.progressFill.style.width = '100%';
       el.progressTimer.textContent = '10.0s / 10.0s (Fallback)';
       el.progressStage.textContent =
@@ -2001,6 +2027,7 @@ function init() {
   renderAllOutputs();
   initSlideVideoStudio();
   initUgcGridStudio();
+  initGoogleSheetLogger();
 }
 
 function launchSlideGeminiWithPromptSync(promptText, bannerTitle, toastMessage) {
@@ -2264,6 +2291,321 @@ function initSlideVideoStudio() {
       el.slideVideoDriveBtn.innerHTML = orig;
     }
   });
+}
+
+/* ==========================================================================
+   Google Sheet Session Logger & CSV History Export
+   ========================================================================== */
+
+function getBangkokTimestamp() {
+  try {
+    return new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString();
+  }
+}
+
+function buildCurrentSessionSheetRecord() {
+  const payload = collectInputPayload();
+  const p = state.plan || buildLocalStudioPlan(payload);
+  const slides = p.slides || [];
+  const formatShot = (idx) => {
+    const s = slides[idx];
+    if (!s) return '';
+    return `[${s.timecode}] ${s.title}\nPrompt: ${s.prompt}\nVO: "${s.voiceover}"`;
+  };
+
+  const imagenText = (p.imagenPrompts || [])
+    .map((im, i) => `(${i + 1}) ${im.title} [${im.ratio}]: ${im.prompt}`)
+    .join('\n\n');
+
+  const captionsText = [
+    ...(p.captions || []).map((c) => `[${c.platform}]\n${c.text}`),
+    (p.hashtags || []).length ? `Hashtags: ${(p.hashtags || []).join(' ')}` : ''
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const ugcPrompt = el.ugcPromptTextarea?.value.trim() || '';
+  const latestDriveUrl = state.driveHistory?.[0]?.webViewLink || '';
+  const timestamp = getBangkokTimestamp();
+
+  const rowValues = [
+    timestamp,
+    payload.productName || p.productName || 'สินค้าไม่มีชื่อ',
+    payload.productUrl || '',
+    payload.benefits || '',
+    payload.pricePromo || '',
+    payload.audience || '',
+    p.flowModeName || payload.flowMode || '',
+    p.clipStyleName || payload.clipStyle || '',
+    payload.lockCharacter ? 'ON' : 'OFF',
+    formatShot(0),
+    formatShot(1),
+    formatShot(2),
+    formatShot(3),
+    imagenText,
+    captionsText,
+    ugcPrompt,
+    latestDriveUrl,
+    p.modelLabel || 'Demo Engine'
+  ];
+
+  return {
+    timestamp,
+    productName: payload.productName || p.productName || 'สินค้าไม่มีชื่อ',
+    sheetUrl: el.sheetUrlInput?.value.trim() || '',
+    rowValues
+  };
+}
+
+function renderSheetHistory() {
+  if (el.sheetSavedCount) {
+    el.sheetSavedCount.textContent = String(state.sheetHistory.length);
+  }
+  if (!el.sheetHistoryList) return;
+  if (!state.sheetHistory.length) {
+    el.sheetHistoryList.innerHTML = '';
+    return;
+  }
+
+  el.sheetHistoryList.innerHTML =
+    '<div class="field-hint" style="margin-top:4px;">ประวัติที่บันทึกล่าสุด:</div>' +
+    state.sheetHistory
+      .slice(0, 5)
+      .map(
+        (item) => `
+      <div class="drive-history-item">
+        <span>${escapeHtml(item.timestamp)} • ${escapeHtml(item.productName)}${
+          item.syncedToSheet ? ' (✓ Google Sheet)' : ' (Local)'
+        }</span>
+        ${
+          item.sheetUrl
+            ? `<a href="${escapeHtml(item.sheetUrl)}" target="_blank" rel="noopener noreferrer">เปิด Google Sheet ↗</a>`
+            : '<span class="field-hint">พร้อม Export .CSV</span>'
+        }
+      </div>
+    `
+      )
+      .join('');
+}
+
+function upsertLocalSheetRecord(record, syncedInfo = null) {
+  const entry = {
+    timestamp: record.timestamp,
+    productName: record.productName,
+    rowValues: record.rowValues,
+    syncedToSheet: Boolean(syncedInfo),
+    sheetUrl: syncedInfo?.sheetUrl || record.sheetUrl || '',
+    rowNumber: syncedInfo?.rowNumber || 0
+  };
+  state.sheetHistory.unshift(entry);
+  state.sheetHistory = state.sheetHistory.slice(0, 50);
+  try {
+    localStorage.setItem(STORAGE_SHEET_HISTORY, JSON.stringify(state.sheetHistory));
+  } catch {
+    state.sheetHistory = state.sheetHistory.slice(0, 20);
+    localStorage.setItem(STORAGE_SHEET_HISTORY, JSON.stringify(state.sheetHistory));
+  }
+  renderSheetHistory();
+  return entry;
+}
+
+async function saveCurrentSessionToSheet({ isAuto = false } = {}) {
+  const webhookUrl = (
+    el.sheetWebhookInput?.value ||
+    el.driveWebhookInput?.value ||
+    ''
+  ).trim();
+  const sheetUrl = el.sheetUrlInput?.value.trim() || '';
+  const sheetTab = el.sheetTabInput?.value.trim() || 'Studio Logs';
+
+  const record = buildCurrentSessionSheetRecord();
+
+  if (!webhookUrl) {
+    upsertLocalSheetRecord(record, null);
+    if (!isAuto) {
+      el.sheetConfigDrawer?.classList.remove('hidden');
+      el.sheetScriptDrawer?.classList.remove('hidden');
+      el.sheetSaveResult.innerHTML =
+        '<div style="color:#fde68a;">บันทึกเก็บในประวัติเครื่องเรียบร้อย (กด ↓ .CSV ได้เลย) • หากต้องการส่งตรงเข้า <strong>Google Sheet</strong> ให้วาง Apps Script URL ด้านบน (ใช้โค้ดจาก "ดูโค้ด Apps Script")</div>';
+      showToast(
+        'บันทึกประวัติไว้ในเครื่องแล้ว — วาง Apps Script URL เพื่อซิงก์เข้า Google Sheet อัตโนมัติ',
+        'warn'
+      );
+      el.sheetWebhookInput?.focus();
+    }
+    return;
+  }
+
+  const btns = [el.saveToSheetBtn, el.sheetSaveNowBtn].filter(Boolean);
+  const origTexts = btns.map((b) => b.innerHTML);
+  btns.forEach((b) => {
+    b.disabled = true;
+  });
+  if (el.sheetSaveNowBtn) el.sheetSaveNowBtn.textContent = 'กำลังส่งเข้า Google Sheet...';
+
+  try {
+    const res = await logToGoogleSheetViaAppsScript({
+      webhookUrl,
+      sheetUrl,
+      sheetTab,
+      rowValues: record.rowValues
+    });
+
+    if (res.sheetUrl && !sheetUrl && el.sheetUrlInput) {
+      el.sheetUrlInput.value = res.sheetUrl;
+      localStorage.setItem(STORAGE_SHEET_URL, res.sheetUrl);
+    }
+
+    upsertLocalSheetRecord(record, res);
+
+    if (el.sheetSaveResult) {
+      el.sheetSaveResult.innerHTML = `
+        <div><strong>✓ บันทึกข้อมูลเข้า Google Sheet สำเร็จ!</strong> (แท็บ <code>${escapeHtml(res.sheetName)}</code> • แถวที่ ${res.rowNumber || '-'})</div>
+        ${
+          res.sheetUrl
+            ? `<div><a href="${escapeHtml(res.sheetUrl)}" target="_blank" rel="noopener noreferrer">เปิดดู Google Sheet ↗</a></div>`
+            : ''
+        }
+      `;
+    }
+
+    showToast(
+      `บันทึก "${record.productName}" เข้า Google Sheet (แถว ${res.rowNumber || 'ล่าสุด'}) สำเร็จ!`,
+      'success'
+    );
+  } catch (err) {
+    upsertLocalSheetRecord(record, null);
+    if (el.sheetSaveResult) {
+      el.sheetSaveResult.innerHTML = `<div style="color:#fca5a5;">⚠️ ${escapeHtml(err.message)}</div>`;
+    }
+    if (!isAuto) {
+      el.sheetConfigDrawer?.classList.remove('hidden');
+    }
+    showToast(`ส่งเข้า Google Sheet ไม่สำเร็จ: ${err.message}`, 'error');
+  } finally {
+    btns.forEach((b, i) => {
+      b.disabled = false;
+      b.innerHTML = origTexts[i];
+    });
+  }
+}
+
+function maybeAutoLogSessionToSheet() {
+  if (state.autoSaveSheet && (el.sheetWebhookInput?.value.trim() || el.driveWebhookInput?.value.trim())) {
+    saveCurrentSessionToSheet({ isAuto: true });
+  } else {
+    // Always keep local session snapshot for 1-click CSV export
+    const record = buildCurrentSessionSheetRecord();
+    upsertLocalSheetRecord(record, null);
+  }
+}
+
+function exportAllSessionsAsCsv() {
+  let records = state.sheetHistory;
+  if (!records.length) {
+    const record = buildCurrentSessionSheetRecord();
+    records = [upsertLocalSheetRecord(record, null)];
+  }
+  const csv = buildSessionsCsv(records);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `ai-ad-studio-th-logs-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast(`ดาวน์โหลดประวัติ ${records.length} รายการเป็นไฟล์ .CSV (นำเข้า Google Sheet ได้ทันที) แล้ว!`, 'success');
+}
+
+function initGoogleSheetLogger() {
+  if (el.sheetScriptCodePreview) {
+    el.sheetScriptCodePreview.textContent = APPS_SCRIPT_TEMPLATE;
+  }
+
+  const savedWebhook = localStorage.getItem(STORAGE_DRIVE_WEBHOOK) || '';
+  const savedSheetUrl = localStorage.getItem(STORAGE_SHEET_URL) || '';
+  const savedSheetTab = localStorage.getItem(STORAGE_SHEET_TAB) || 'Studio Logs';
+  const savedAutoLog = localStorage.getItem(STORAGE_SHEET_AUTOLOG) === 'true';
+
+  try {
+    state.sheetHistory = JSON.parse(localStorage.getItem(STORAGE_SHEET_HISTORY) || '[]');
+  } catch {
+    state.sheetHistory = [];
+  }
+
+  state.autoSaveSheet = savedAutoLog;
+  if (el.sheetWebhookInput) el.sheetWebhookInput.value = savedWebhook;
+  if (el.sheetUrlInput) el.sheetUrlInput.value = savedSheetUrl;
+  if (el.sheetTabInput) el.sheetTabInput.value = savedSheetTab;
+  if (el.autoSaveSheetToggle) el.autoSaveSheetToggle.checked = savedAutoLog;
+  renderSheetHistory();
+
+  // Keep Sheet Webhook URL and Drive Webhook URL synchronized bidirectionally
+  el.sheetWebhookInput?.addEventListener('input', () => {
+    const val = el.sheetWebhookInput.value.trim();
+    localStorage.setItem(STORAGE_DRIVE_WEBHOOK, val);
+    if (el.driveWebhookInput && el.driveWebhookInput.value !== val) {
+      el.driveWebhookInput.value = val;
+    }
+  });
+  el.driveWebhookInput?.addEventListener('input', () => {
+    const val = el.driveWebhookInput.value.trim();
+    if (el.sheetWebhookInput && el.sheetWebhookInput.value !== val) {
+      el.sheetWebhookInput.value = val;
+    }
+  });
+
+  el.sheetUrlInput?.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_SHEET_URL, el.sheetUrlInput.value.trim());
+  });
+  el.sheetTabInput?.addEventListener('input', () => {
+    localStorage.setItem(STORAGE_SHEET_TAB, el.sheetTabInput.value.trim() || 'Studio Logs');
+  });
+  el.autoSaveSheetToggle?.addEventListener('change', () => {
+    state.autoSaveSheet = el.autoSaveSheetToggle.checked;
+    localStorage.setItem(STORAGE_SHEET_AUTOLOG, String(state.autoSaveSheet));
+    showToast(
+      state.autoSaveSheet
+        ? 'เปิดบันทึกเข้า Google Sheet อัตโนมัติทุกครั้งที่สร้างพรอมแล้ว'
+        : 'ปิดการบันทึกอัตโนมัติ (ยังกดบันทึกเองได้ทุกเมื่อ)',
+      'info'
+    );
+  });
+
+  el.toggleSheetConfigBtn?.addEventListener('click', () => {
+    el.sheetConfigDrawer?.classList.toggle('hidden');
+  });
+  el.toggleSheetScriptBtn?.addEventListener('click', () => {
+    el.sheetScriptDrawer?.classList.toggle('hidden');
+  });
+  el.copySheetScriptBtn?.addEventListener('click', () => {
+    copyText(
+      APPS_SCRIPT_TEMPLATE,
+      el.copySheetScriptBtn,
+      'คัดลอกโค้ด Apps Script (รองรับทั้ง Google Sheet + Drive) แล้ว!'
+    );
+  });
+
+  el.saveToSheetBtn?.addEventListener('click', () => {
+    saveCurrentSessionToSheet({ isAuto: false });
+  });
+  el.sheetSaveNowBtn?.addEventListener('click', () => {
+    saveCurrentSessionToSheet({ isAuto: false });
+  });
+  el.exportCsvBtn?.addEventListener('click', exportAllSessionsAsCsv);
 }
 
 document.addEventListener('DOMContentLoaded', init);
