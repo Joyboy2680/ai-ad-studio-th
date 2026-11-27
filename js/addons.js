@@ -6,6 +6,7 @@
 
 export const STORAGE_CUSTOM_ADDONS = 'ai_ad_studio_th_custom_menu_addons';
 export const STORAGE_ANIMATIONS_ENABLED = 'ai_ad_studio_th_animations_enabled';
+export const STORAGE_THEME = 'ai_ad_studio_th_theme';
 
 export const HOOK_TEMPLATES = [
   {
@@ -100,6 +101,10 @@ export function initMenuBarAndAddons({
   const backToHomeBtn = document.getElementById('backToHomeBtn');
   const goToInputPageBtn = document.getElementById('goToInputPageBtn');
   const topbarSettingsBtn = document.getElementById('topbarSettingsBtn');
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  const themeToggleIcon = document.getElementById('themeToggleIcon');
+  const themeToggleText = document.getElementById('themeToggleText');
+  const workflowStepper = document.getElementById('workflowStepper');
   const closeSettingsPanelBtn = document.getElementById('closeSettingsPanelBtn');
   const closeAddonsHubBtn = document.getElementById('closeAddonsHubBtn');
   const pageTitleEl = document.getElementById('workspacePageTitle');
@@ -108,6 +113,35 @@ export function initMenuBarAndAddons({
   const customContainer = document.getElementById('customMenuSlots');
 
   if (!menuBar) return { navigateToPage: () => {} };
+
+  // Light / Dark Theme Toggle (persisted in localStorage)
+  function applyTheme(theme, { notify = false } = {}) {
+    const isLight = theme === 'light';
+    document.documentElement.setAttribute('data-theme', isLight ? 'light' : 'dark');
+    if (themeToggleIcon) themeToggleIcon.textContent = isLight ? '🌙' : '☀️';
+    if (themeToggleText) themeToggleText.textContent = isLight ? 'มืด' : 'สว่าง';
+    try {
+      localStorage.setItem(STORAGE_THEME, isLight ? 'light' : 'dark');
+    } catch {
+      /* ignore storage errors */
+    }
+    if (notify) {
+      onShowToast?.(isLight ? '☀️ เปลี่ยนเป็นโหมดสว่าง (Daylight Studio)' : '🌙 เปลี่ยนเป็นโหมดมืด (Obsidian Studio)', 'info');
+    }
+  }
+
+  let savedTheme = 'dark';
+  try {
+    savedTheme = localStorage.getItem(STORAGE_THEME) || 'dark';
+  } catch {
+    savedTheme = 'dark';
+  }
+  applyTheme(savedTheme);
+
+  themeToggleBtn?.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    applyTheme(current === 'light' ? 'dark' : 'light', { notify: true });
+  });
 
   // Mobile Off-Canvas Sidebar Helpers
   const openMobileSidebar = () => {
@@ -148,6 +182,18 @@ export function initMenuBarAndAddons({
       btn.classList.toggle('active', btn.dataset.page === target);
     });
     topbarSettingsBtn?.classList.toggle('active', target === 'settings');
+
+    // 1b. Update 2-step workflow stepper visibility & active state
+    if (workflowStepper) {
+      const showStepper = ['input', 'studio', 'ugc-grid', 'imagen', 'captions'].includes(target);
+      workflowStepper.classList.toggle('hidden', !showStepper);
+      const isStep1 = target === 'input';
+      workflowStepper.querySelectorAll('[data-step-page]').forEach((btn) => {
+        const isBtn1 = btn.dataset.stepPage === 'input';
+        btn.classList.toggle('active', isStep1 ? isBtn1 : !isBtn1);
+        btn.classList.toggle('done', !isStep1 && isBtn1);
+      });
+    }
 
     // 2. Update top header title, badge, subtitle & Back-to-Home button
     const meta = PAGE_META[target];
@@ -212,6 +258,11 @@ export function initMenuBarAndAddons({
   // Bind all sidebar page links
   menuBar.querySelectorAll('[data-page]').forEach((btn) => {
     btn.addEventListener('click', () => navigateToPage(btn.dataset.page));
+  });
+
+  // Bind 2-step workflow stepper buttons
+  workflowStepper?.querySelectorAll('[data-step-page]').forEach((btn) => {
+    btn.addEventListener('click', () => navigateToPage(btn.dataset.stepPage));
   });
 
   // Bind Add-on sub-tabs to sync URL/sidebar highlight as well

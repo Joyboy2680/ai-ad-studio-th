@@ -216,6 +216,16 @@
                   <option value="gemini-4-hydrogen">gemini-4-hydrogen</option>
                 </select>
               </div>
+              <button
+                type="button"
+                id="themeToggleBtn"
+                class="api-help-link theme-toggle-btn"
+                title="สลับโหมดสว่าง / โหมดมืด"
+                aria-label="สลับโหมดสว่างหรือโหมดมืด"
+              >
+                <span id="themeToggleIcon">☀️</span>
+                <span id="themeToggleText">สว่าง</span>
+              </button>
               <button type="button" id="topbarSettingsBtn" class="api-help-link" title="ตั้งค่าการเชื่อมต่อและ UI">
                 ⚙️ ตั้งค่า
               </button>
@@ -223,8 +233,27 @@
           </div>
         </header>
 
-        <!-- Main 12-Column (5:7) Studio Layout -->
+        <!-- Main Studio Workspace -->
         <main class="studio-main">
+          <!-- Guided 2-Step Workflow Stepper -->
+          <div id="workflowStepper" class="workflow-stepper" role="navigation" aria-label="ขั้นตอนการทำงานหลัก">
+            <button type="button" class="workflow-step-btn" data-step-page="input">
+              <span class="workflow-step-num">1</span>
+              <span class="workflow-step-copy">
+                <strong>AI Auto-Fill &amp; ข้อมูลสินค้า</strong>
+                <small>วางลิงก์ดึงรูปสินค้าหลายมุม • ตั้งค่าโหมด &amp; ล็อกตัวละคร</small>
+              </span>
+            </button>
+            <span class="workflow-step-arrow" aria-hidden="true">→</span>
+            <button type="button" class="workflow-step-btn active" data-step-page="studio">
+              <span class="workflow-step-num">2</span>
+              <span class="workflow-step-copy">
+                <strong>สตูดิโอผลลัพธ์พร้อมใช้งาน</strong>
+                <small>สไลด์คลิป 10 วิ • ภาพนิ่ง Imagen • ภาพ UGC 4 ช่อง • แคปชั่น</small>
+              </span>
+            </button>
+          </div>
+
           <!-- Unified Studio Settings Drawer Panel -->
           <section id="settingsPanelCard" class="glass-card settings-panel hidden" aria-label="ตั้งค่าสตูดิโอและการเชื่อมต่อ">
             <div class="addons-drawer-top">
