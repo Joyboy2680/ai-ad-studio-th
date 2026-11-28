@@ -275,6 +275,7 @@ export function initMenuBarAndAddons({
 
   const studioOverviewHub = document.getElementById('studioOverviewHub');
   const hubCopyAllBtn = document.getElementById('hubCopyAllBtn');
+  const hubExportBriefBtn = document.getElementById('hubExportBriefBtn');
   const hubSaveSheetBtn = document.getElementById('hubSaveSheetBtn');
 
   studioOverviewHub?.querySelectorAll('[data-hub-page]').forEach((btn) => {
@@ -283,8 +284,11 @@ export function initMenuBarAndAddons({
   hubCopyAllBtn?.addEventListener('click', () => {
     document.getElementById('copyAllBtn')?.click();
   });
+  hubExportBriefBtn?.addEventListener('click', () => {
+    document.getElementById('exportBriefBtn')?.click();
+  });
   hubSaveSheetBtn?.addEventListener('click', () => {
-    document.getElementById('saveSheetQuickBtn')?.click();
+    document.getElementById('saveToSheetBtn')?.click();
   });
 
   // SPA Multi-Page Router

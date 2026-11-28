@@ -33,6 +33,19 @@ import {
 } from './drive.js';
 import { renderUgc4GridCanvas } from './ugc-canvas.js';
 import { initMenuBarAndAddons } from './addons.js';
+import {
+  STORAGE_CUSTOM_PROXY_URL,
+  loadProjectHistory,
+  saveProjectToHistory,
+  deleteProjectFromHistory,
+  formatShortThaiDate,
+  getSpeechPacingBadge,
+  speakThaiText,
+  speakAllSlides,
+  stopSpeaking,
+  regenerateSingleShotVariation,
+  exportStoryboardBriefPdf
+} from './studio-pro.js';
 
 const STORAGE_API_KEY = 'ai_ad_studio_th_gemini_api_key';
 const MAX_IMAGE_DIM = 640;
@@ -960,6 +973,7 @@ async function handleGenerate() {
     state.plan = plan;
     state.currentSlide = 0;
     renderAllOutputs();
+    saveCurrentCampaignToHistory();
     maybeAutoLogSessionToSheet();
     state.navigatePage?.('studio');
 
@@ -977,6 +991,7 @@ async function handleGenerate() {
       state.plan = fallbackPlan;
       state.currentSlide = 0;
       renderAllOutputs();
+      saveCurrentCampaignToHistory();
       maybeAutoLogSessionToSheet();
       state.navigatePage?.('studio');
       el.progressFill.style.width = '100%';
@@ -1137,6 +1152,9 @@ function renderSlidesTab() {
                 <button type="button" class="btn-gemini-sm" data-gemini-slide="${i}">
                   เข้าเว็บ Gemini ↗ (สร้างวิดีโอ)
                 </button>
+                <button type="button" class="btn-copy-sm" data-regen-slide="${i}" title="เปลี่ยน Hook / มุมกล้องเฉพาะช็อตนี้โดยไม่กระทบช็อตอื่น">
+                  🎲 สุ่มมุมช็อตนี้
+                </button>
                 <button type="button" class="btn-copy-sm" data-copy-slide="${i}">
                   คัดลอกพรอมช็อตนี้
                 </button>
@@ -1147,7 +1165,18 @@ function renderSlidesTab() {
 
           <div class="slide-details-grid">
             <div class="detail-tile full">
-              <div class="detail-label">บทพูด / Voiceover (ภาษาไทย)</div>
+              <div class="detail-label-row">
+                <span class="detail-label">บทพูด / Voiceover (ภาษาไทย)</span>
+                <div class="vo-tools-inline">
+                  ${(() => {
+                    const pace = getSpeechPacingBadge(s.voiceover, i);
+                    return `<span class="vo-pace-badge ${pace.ok ? 'ok' : 'warn'}">${escapeHtml(pace.label)}</span>`;
+                  })()}
+                  <button type="button" class="btn-speak-mini" data-speak-slide="${i}" title="ฟังเสียงอ่านบทพูดภาษาไทยช็อตนี้">
+                    🔊 ฟังเสียง
+                  </button>
+                </div>
+              </div>
               <div class="detail-text vo">“${escapeHtml(s.voiceover)}”</div>
             </div>
             <div class="detail-tile">
@@ -1184,6 +1213,38 @@ function renderSlidesTab() {
           `คัดลอก Prompt วิดีโอ Shot ${idx + 1} (${slide.timecode}) แล้ว & เปิดเว็บ Gemini ↗ เรียบร้อย!`
         );
       }
+    });
+  });
+
+  el.carouselTrack.querySelectorAll('[data-regen-slide]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.regenSlide);
+      const slide = state.plan.slides[idx];
+      if (!slide) return;
+      const productName = el.productNameInput?.value?.trim() || state.plan.productName || 'สินค้าตัวนี้';
+      const price = el.productPriceInput?.value?.trim() || '';
+      state.plan.slides[idx] = regenerateSingleShotVariation(slide, idx, productName, price);
+      renderSlidesTab();
+      renderTimelineTab();
+      renderStudioOverviewHub();
+      showToast(`🎲 เปลี่ยนมุม & บทพูด Shot ${idx + 1} ให้ใหม่แล้ว!`, 'success');
+    });
+  });
+
+  el.carouselTrack.querySelectorAll('[data-speak-slide]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const idx = Number(btn.dataset.speakSlide);
+      const slide = state.plan.slides[idx];
+      if (!slide) return;
+      speakThaiText(slide.voiceover, {
+        onStart: () => {
+          btn.textContent = '⏹ กำลังอ่าน...';
+        },
+        onEnd: () => {
+          btn.textContent = '🔊 ฟังเสียง';
+        },
+        onError: (msg) => showToast(msg, 'warn')
+      });
     });
   });
 
@@ -2235,6 +2296,195 @@ function init() {
     onShowToast: showToast
   });
   state.navigatePage = navCtrl?.navigateToPage || null;
+  initStudioProFeatures();
+}
+
+function saveCurrentCampaignToHistory() {
+  if (!state.plan) return;
+  const productName =
+    el.productNameInput?.value?.trim() || state.plan.productName || 'สินค้าไม่มีชื่อ';
+  saveProjectToHistory({
+    productName,
+    productUrl: el.productUrlInput?.value?.trim() || '',
+    benefits: el.productBenefitsInput?.value?.trim() || '',
+    price: el.productPriceInput?.value?.trim() || '',
+    audience: el.targetAudienceInput?.value?.trim() || '',
+    appearance: el.productAppearanceInput?.value?.trim() || '',
+    aspectRatio: el.aspectRatioSelect?.value || '9:16',
+    flowMode: state.selectedFlowMode,
+    clipStyle: state.selectedClipStyle,
+    lockCharacter: Boolean(el.lockCharacterToggle?.checked),
+    characterAnchor: el.characterAnchorInput?.value?.trim() || '',
+    thumbDataUrl: state.ingredients?.[1]?.dataUrl || '',
+    plan: state.plan
+  });
+  renderHubProjectHistory();
+}
+
+function restoreProjectFromHistory(item) {
+  if (!item) return;
+  state.isSamplePreload = false;
+  if (el.productUrlInput) el.productUrlInput.value = item.productUrl || '';
+  if (el.productNameInput) el.productNameInput.value = item.productName || '';
+  if (el.productBenefitsInput) el.productBenefitsInput.value = item.benefits || '';
+  if (el.productPriceInput) el.productPriceInput.value = item.price || '';
+  if (el.targetAudienceInput) el.targetAudienceInput.value = item.audience || '';
+  if (el.productAppearanceInput) el.productAppearanceInput.value = item.appearance || '';
+  if (el.aspectRatioSelect && item.aspectRatio) el.aspectRatioSelect.value = item.aspectRatio;
+  if (el.lockCharacterToggle) el.lockCharacterToggle.checked = Boolean(item.lockCharacter);
+  if (el.characterAnchorInput) el.characterAnchorInput.value = item.characterAnchor || '';
+
+  if (item.flowMode) state.selectedFlowMode = item.flowMode;
+  if (item.clipStyle) state.selectedClipStyle = item.clipStyle;
+  renderFlowModeCards();
+  renderClipStyleCards();
+
+  if (item.plan) {
+    state.plan = item.plan;
+    state.currentSlide = 0;
+    renderAllOutputs();
+  }
+  showToast(`🗂️ โหลดงาน “${item.productName}” กลับมาเรียบร้อยแล้ว!`, 'success');
+}
+
+function renderHubProjectHistory() {
+  const listEl = document.getElementById('hubHistoryList');
+  const countEl = document.getElementById('hubHistoryCount');
+  if (!listEl) return;
+
+  const items = loadProjectHistory();
+  if (countEl) countEl.textContent = `${items.length} รายการ`;
+
+  if (!items.length) {
+    listEl.innerHTML =
+      '<div class="hub-history-empty">ยังไม่มีประวัติงาน — ลองกด “✨ ใส่ลิงก์ / แก้ข้อมูลสินค้า” แล้วสร้างงานแรกได้เลย</div>';
+    return;
+  }
+
+  listEl.innerHTML = items
+    .slice(0, 8)
+    .map(
+      (item) => `
+      <div class="hub-history-item" data-history-id="${escapeHtml(item.id)}">
+        <div class="hub-history-thumb">
+          ${
+            item.thumbDataUrl
+              ? `<img src="${item.thumbDataUrl}" alt="" />`
+              : '<span>🎬</span>'
+          }
+        </div>
+        <div class="hub-history-meta">
+          <strong>${escapeHtml(item.productName)}</strong>
+          <small>${escapeHtml(item.plan?.flowModeName || item.flowMode || 'Veo 3')} • ${escapeHtml(formatShortThaiDate(item.savedAt))}</small>
+        </div>
+        <div class="hub-history-btns">
+          <button type="button" class="btn-secondary-sm" data-restore-history="${escapeHtml(item.id)}">
+            เปิดแก้ต่อ
+          </button>
+          <button type="button" class="icon-btn-mini" data-delete-history="${escapeHtml(item.id)}" title="ลบประวัตินี้" aria-label="ลบประวัติ">
+            ✕
+          </button>
+        </div>
+      </div>
+    `
+    )
+    .join('');
+
+  listEl.querySelectorAll('[data-restore-history]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = loadProjectHistory().find((it) => it.id === btn.dataset.restoreHistory);
+      if (target) restoreProjectFromHistory(target);
+    });
+  });
+
+  listEl.querySelectorAll('[data-delete-history]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      deleteProjectFromHistory(btn.dataset.deleteHistory);
+      renderHubProjectHistory();
+      showToast('ลบรายการออกจากประวัติแล้ว', 'info');
+    });
+  });
+}
+
+function initStudioProFeatures() {
+  renderHubProjectHistory();
+
+  // 1. Speak All 4 Shots (Thai Voiceover 10s Preview)
+  const speakAllBtn = document.getElementById('speakAllShotsBtn');
+  let isSpeakingAll = false;
+  speakAllBtn?.addEventListener('click', () => {
+    if (isSpeakingAll) {
+      stopSpeaking();
+      isSpeakingAll = false;
+      speakAllBtn.textContent = '🔊 ฟังบทพูด 10 วิ';
+      return;
+    }
+    const slides = state.plan?.slides || [];
+    if (!slides.length) {
+      showToast('ยังไม่มีบทพูดให้เล่น กรุณาสร้างพรอมต์ก่อน', 'warn');
+      return;
+    }
+    isSpeakingAll = true;
+    speakAllBtn.textContent = '⏹ หยุดฟัง';
+    speakAllSlides(slides, {
+      onShotStart: (shotIdx) => {
+        goToSlide(shotIdx);
+        speakAllBtn.textContent = `⏹ กำลังอ่าน Shot ${shotIdx + 1}/4`;
+      },
+      onDone: () => {
+        isSpeakingAll = false;
+        speakAllBtn.textContent = '🔊 ฟังบทพูด 10 วิ';
+      },
+      onError: (msg) => {
+        isSpeakingAll = false;
+        speakAllBtn.textContent = '🔊 ฟังบทพูด 10 วิ';
+        showToast(msg, 'warn');
+      }
+    });
+  });
+
+  // 2. Export 1-Page Storyboard Brief / PDF
+  const exportBriefBtn = document.getElementById('exportBriefBtn');
+  exportBriefBtn?.addEventListener('click', () => {
+    if (!state.plan) {
+      showToast('ยังไม่มีข้อมูลสตอรี่บอร์ด กรุณากดสร้างพรอมต์ก่อน', 'warn');
+      return;
+    }
+    const ok = exportStoryboardBriefPdf({
+      plan: state.plan,
+      productName: el.productNameInput?.value?.trim() || state.plan.productName || 'AI Ad Studio TH',
+      price: el.productPriceInput?.value?.trim() || '',
+      thumbDataUrl: state.ingredients?.[1]?.dataUrl || ''
+    });
+    if (!ok) {
+      showToast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up แล้วกดอีกครั้ง', 'warn');
+    } else {
+      showToast('🖨️ เปิดหน้าบรีฟสตอรี่บอร์ด 1 หน้าพร้อมพิมพ์/บันทึก PDF แล้ว!', 'success');
+    }
+  });
+
+  // 3. Custom CORS Proxy URL in Settings (for 100% reliable link fetch)
+  const proxyInput = document.getElementById('settingsProxyUrlInput');
+  if (proxyInput) {
+    try {
+      proxyInput.value = localStorage.getItem(STORAGE_CUSTOM_PROXY_URL) || '';
+    } catch {
+      proxyInput.value = '';
+    }
+    proxyInput.addEventListener('change', () => {
+      const val = proxyInput.value.trim();
+      try {
+        if (val) localStorage.setItem(STORAGE_CUSTOM_PROXY_URL, val);
+        else localStorage.removeItem(STORAGE_CUSTOM_PROXY_URL);
+      } catch {
+        /* ignore */
+      }
+      showToast(
+        val ? 'บันทึก CORS Proxy สำรองเรียบร้อยแล้ว!' : 'ล้างค่า CORS Proxy สำรองแล้ว (ใช้ระบบอัตโนมัติ)',
+        'info'
+      );
+    });
+  }
 }
 
 function launchSlideGeminiWithPromptSync(promptText, bannerTitle, toastMessage) {

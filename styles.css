@@ -5452,6 +5452,222 @@ html[data-theme="light"] .hub-open-btn.primary {
   }
 }
 
+/* ==========================================================================
+   Studio Pro 10/10 Suite — Project History, Voiceover Pacing & TTS Controls
+   ========================================================================== */
+
+.hub-history-card {
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.hub-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.hub-history-head h3 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.hub-history-head small {
+  display: block;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.hub-history-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.hub-history-empty {
+  grid-column: 1 / -1;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed var(--border-medium);
+  background: var(--bg-well);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.hub-history-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  transition: border-color 0.18s ease, transform 0.18s var(--ease-spring);
+}
+
+.hub-history-item:hover {
+  border-color: var(--border-medium);
+  transform: translateY(-1px);
+}
+
+.hub-history-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--bg-card-elevated);
+  border: 1px solid var(--border-subtle);
+  font-size: 1.05rem;
+}
+
+.hub-history-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hub-history-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-history-meta strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-history-meta small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-history-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Per-Shot Voiceover Pacing Badge & TTS Button */
+.detail-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.detail-label-row .detail-label {
+  margin-bottom: 0;
+}
+
+.vo-tools-inline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.vo-pace-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.vo-pace-badge.ok {
+  background: rgba(52, 211, 153, 0.14);
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.34);
+}
+
+.vo-pace-badge.warn {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fde68a;
+  border-color: rgba(251, 191, 36, 0.36);
+}
+
+html[data-theme="light"] .vo-pace-badge.ok {
+  background: rgba(5, 150, 105, 0.12);
+  color: #065f46;
+  border-color: rgba(5, 150, 105, 0.3);
+}
+
+html[data-theme="light"] .vo-pace-badge.warn {
+  background: rgba(217, 119, 6, 0.14);
+  color: #92400e;
+  border-color: rgba(217, 119, 6, 0.34);
+}
+
+.btn-speak-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-card-elevated);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.71rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-speak-mini:hover {
+  border-color: var(--accent-blue);
+  background: rgba(96, 165, 250, 0.14);
+}
+
+html[data-theme="light"] .btn-speak-mini {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+@media (max-width: 860px) {
+  .hub-history-list {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-history-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+}
+
+
 
 
 

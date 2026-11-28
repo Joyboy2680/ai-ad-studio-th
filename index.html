@@ -307,6 +307,9 @@
                   <button type="button" id="hubCopyAllBtn" class="btn-secondary-sm">
                     📋 คัดลอกทั้งหมด
                   </button>
+                  <button type="button" id="hubExportBriefBtn" class="btn-secondary-sm" title="พิมพ์หรือบันทึกสตอรี่บอร์ด 1 หน้าเป็น PDF">
+                    🖨️ บรีฟ PDF
+                  </button>
                   <button type="button" id="hubSaveSheetBtn" class="btn-sheet-sm">
                     📊 Google Sheet
                   </button>
@@ -397,6 +400,20 @@
               </article>
             </div>
 
+            <!-- In-App Project History / Drafts (1-Click Restore) -->
+            <div id="hubHistorySection" class="hub-history-card">
+              <div class="hub-history-head">
+                <div>
+                  <h3>🗂️ ประวัติงานล่าสุดในเครื่อง (เปิดกลับมาแก้ต่อได้ทันที)</h3>
+                  <small>บันทึกอัตโนมัติทุกครั้งที่กดสร้างพรอมต์ สูงสุด 20 รายการ</small>
+                </div>
+                <span id="hubHistoryCount" class="menu-badge">0 รายการ</span>
+              </div>
+              <div id="hubHistoryList" class="hub-history-list">
+                <div class="hub-history-empty">ยังไม่มีประวัติงาน — ลองกด “✨ ใส่ลิงก์ / แก้ข้อมูลสินค้า” แล้วสร้างงานแรกได้เลย</div>
+              </div>
+            </div>
+
             <!-- Slim Beginner Tip Strip -->
             <div class="hub-quick-tip-bar">
               <div class="hub-quick-tip-text">
@@ -481,6 +498,15 @@
                     <input type="checkbox" id="settingsAutoSaveToggle" />
                     <span>บันทึก Google Sheet อัตโนมัติทุกครั้ง</span>
                   </label>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="settingsProxyUrlInput">CORS Proxy สำรอง (ไม่บังคับ — เช่น Cloudflare Worker)</label>
+                  <input
+                    type="url"
+                    id="settingsProxyUrlInput"
+                    class="field-input mono"
+                    placeholder="https://my-proxy.workers.dev/?url="
+                  />
                 </div>
               </div>
 
@@ -856,6 +882,9 @@
                     </svg>
                     .TXT
                   </button>
+                  <button type="button" id="exportBriefBtn" class="btn-secondary-sm" title="พิมพ์หรือบันทึกสตอรี่บอร์ด 1 หน้าเป็น PDF">
+                    🖨️ PDF
+                  </button>
                   <button type="button" id="copyAllBtn" class="btn-copy-all">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
                       <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -994,6 +1023,14 @@
                 <div class="carousel-toolbar">
                   <div class="timecode-pills" id="timecodePills"></div>
                   <div class="carousel-controls">
+                    <button
+                      type="button"
+                      id="speakAllShotsBtn"
+                      class="btn-secondary-sm btn-speak-all"
+                      title="ฟังเสียงอ่านบทพูดภาษาไทยครบ 4 ช็อต เพื่อเช็กจังหวะ 10 วิ"
+                    >
+                      🔊 ฟังบทพูด 10 วิ
+                    </button>
                     <span class="nav-hint">← / → หรือปัด Swipe</span>
                     <button
                       type="button"

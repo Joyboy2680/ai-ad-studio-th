@@ -614,24 +614,41 @@ export async function fetchProductPreviewFromUrl(rawUrl) {
 
   // 3) OpenGraph / JSON-LD / Product Gallery HTML fallback whenever < 4 images collected
   if (collectedImgs.length < 4 && !blockedReason) {
-    const html = await fetchTextWithTimeout(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedUrl)}`,
-      5500
+    let customProxy = '';
+    try {
+      customProxy = (localStorage.getItem('ai_ad_studio_th_custom_proxy_url') || '').trim();
+    } catch {
+      customProxy = '';
+    }
+
+    const proxyCandidates = [];
+    if (customProxy) {
+      const sep = customProxy.includes('?') ? (customProxy.endsWith('=') || customProxy.endsWith('&') ? '' : '&url=') : '?url=';
+      proxyCandidates.push({ name: 'custom-proxy', url: `${customProxy}${sep}${encodeURIComponent(normalizedUrl)}` });
+    }
+    proxyCandidates.push(
+      { name: 'opengraph', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(normalizedUrl)}` },
+      { name: 'corsproxy', url: `https://corsproxy.io/?url=${encodeURIComponent(normalizedUrl)}` }
     );
-    const og = parseOpenGraphFromHtml(html, normalizedUrl);
-    if (og) {
-      const checkTitle = isLikelyBlockedOrLogo('', og.title);
-      if (checkTitle.blocked) {
-        blockedReason = checkTitle.reason;
-      } else {
-        if (!bestTitle && og.title) bestTitle = og.title;
-        if (!bestDesc && og.description) bestDesc = og.description;
-        let added = 0;
-        for (const im of og.imageUrls || []) {
-          if (pushImageCandidate(im, og.title)) added += 1;
-          if (collectedImgs.length >= 8) break;
+
+    for (const candidate of proxyCandidates) {
+      if (collectedImgs.length >= 4 || blockedReason) break;
+      const html = await fetchTextWithTimeout(candidate.url, 5500);
+      const og = parseOpenGraphFromHtml(html, normalizedUrl);
+      if (og) {
+        const checkTitle = isLikelyBlockedOrLogo('', og.title);
+        if (checkTitle.blocked) {
+          blockedReason = checkTitle.reason;
+        } else {
+          if (!bestTitle && og.title) bestTitle = og.title;
+          if (!bestDesc && og.description) bestDesc = og.description;
+          let added = 0;
+          for (const im of og.imageUrls || []) {
+            if (pushImageCandidate(im, og.title)) added += 1;
+            if (collectedImgs.length >= 8) break;
+          }
+          if (added > 0) sourcesUsed.push(candidate.name);
         }
-        if (added > 0) sourcesUsed.push('opengraph');
       }
     }
   }
