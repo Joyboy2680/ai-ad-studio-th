@@ -1006,12 +1006,64 @@ function renderAllOutputs() {
   renderImagenTab();
   renderCaptionsTab();
   renderTimelineTab();
+  renderStudioOverviewHub();
 
   const outputShell = document.querySelector('.output-shell');
   if (outputShell) {
     outputShell.classList.remove('just-generated');
     void outputShell.offsetWidth;
     outputShell.classList.add('just-generated');
+  }
+}
+
+function renderStudioOverviewHub() {
+  const p = state.plan;
+  if (!p) return;
+
+  const nameEl = document.getElementById('hubProductName');
+  const metaEl = document.getElementById('hubProductMeta');
+  const thumbEl = document.getElementById('hubProductThumb');
+  const slidesPrev = document.getElementById('hubSlidesPreview');
+  const imagenPrev = document.getElementById('hubImagenPreview');
+  const captionsPrev = document.getElementById('hubCaptionsPreview');
+
+  const productName =
+    el.productNameInput?.value?.trim() || p.productName || 'สินค้าพร้อมสร้างโฆษณา';
+  if (nameEl) nameEl.textContent = productName;
+
+  if (metaEl) {
+    metaEl.innerHTML = `
+      <span class="hub-meta-tag">${escapeHtml(p.flowModeName || 'Veo 3')}</span>
+      <span class="hub-meta-tag">${escapeHtml(p.aspectRatio || '9:16')}</span>
+      <span class="hub-meta-tag ${p.lockCharacter ? 'mint' : ''}">
+        ${p.lockCharacter ? '🔒 ล็อกตัวละคร ON' : '🔓 ล็อกตัวละคร OFF'}
+      </span>
+    `;
+  }
+
+  if (thumbEl) {
+    const imgData = state.ingredients?.[1]?.dataUrl;
+    if (imgData) {
+      thumbEl.innerHTML = `<img src="${imgData}" alt="${escapeHtml(productName)}" />`;
+    } else {
+      thumbEl.innerHTML = '<span class="hub-thumb-placeholder">✨</span>';
+    }
+  }
+
+  const firstSlide = p.slides?.[0];
+  if (slidesPrev && firstSlide) {
+    slidesPrev.textContent = `“${firstSlide.voiceover || firstSlide.title}” — ครบ ${p.slides.length} ช็อต พร้อมปุ่มเข้าเว็บ Gemini สร้างวิดีโอ`;
+  }
+
+  const firstImg = p.imagenPrompts?.[0];
+  if (imagenPrev && firstImg) {
+    imagenPrev.textContent = `พร้อมใช้งาน ${p.imagenPrompts.length} ช็อต • ตัวอย่าง: ${firstImg.title || 'Hero Packshot'}`;
+  }
+
+  const firstCaption = p.captions?.[0];
+  if (captionsPrev && firstCaption) {
+    const snippet = String(firstCaption.text || firstCaption.caption || '').replace(/\s+/g, ' ').slice(0, 110);
+    if (snippet) captionsPrev.textContent = `${snippet}${snippet.length >= 110 ? '…' : ''}`;
   }
 }
 

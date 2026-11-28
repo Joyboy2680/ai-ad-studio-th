@@ -82,6 +82,11 @@
 
           <div class="sidebar-section-label">ฟังก์ชันแยกหน้า</div>
           <div class="sidebar-group">
+            <button type="button" class="side-nav-item" data-page="slides">
+              <span class="side-nav-icon">🎬</span>
+              <span class="side-nav-label">สไลด์คลิป 0–10 วิ</span>
+              <span class="menu-badge blue">4 ช็อต</span>
+            </button>
             <button type="button" class="side-nav-item" data-page="ugc-grid">
               <span class="side-nav-icon">🖼️</span>
               <span class="side-nav-label">ภาพ UGC 4 ช่อง</span>
@@ -265,55 +270,134 @@
             </button>
           </div>
 
-          <!-- Beginner-Friendly 3-Step Quick-Start Card -->
-          <section id="beginnerGuideCard" class="beginner-guide-card" aria-label="คู่มือเริ่มต้นใช้งานง่ายๆ 3 ขั้นตอน">
-            <div class="beginner-guide-top">
-              <div class="beginner-guide-heading">
-                <span class="beginner-guide-pill">👋 ใช้งานง่ายใน 3 ขั้นตอน</span>
-                <h2>สร้างคลิปขายของ &amp; ภาพโฆษณาแบบไม่ต้องเก่ง AI</h2>
-                <p>ลองใช้ได้ฟรีทันทีไม่ต้องตั้งค่าให้ยุ่งยาก แค่ทำตาม 3 ขั้นตอนนี้:</p>
+          <!-- Redesigned Home Page: สตูดิโอผลลัพธ์พร้อมใช้งาน (Clean Overview & Launchpad Hub) -->
+          <section id="studioOverviewHub" class="studio-overview-hub" aria-label="สตูดิโอผลลัพธ์พร้อมใช้งาน">
+            <!-- Current Product Hero Summary -->
+            <div class="hub-hero-card">
+              <div class="hub-hero-main">
+                <div class="hub-product-thumb" id="hubProductThumb" aria-hidden="true">
+                  <span class="hub-thumb-placeholder">✨</span>
+                </div>
+                <div class="hub-hero-info">
+                  <div class="hub-hero-eyebrow">
+                    <span class="hub-ready-dot"></span>
+                    <span>พร้อมใช้งานแล้ว • เลือกเปิดแต่ละหมวดได้เลย</span>
+                  </div>
+                  <h2 id="hubProductName" class="hub-product-name">AuraGlow Vit-C 15% Glass Skin Serum</h2>
+                  <div id="hubProductMeta" class="hub-product-meta">
+                    <span class="hub-meta-tag">Veo 3 (Audio+Video)</span>
+                    <span class="hub-meta-tag">9:16 แนวตั้ง</span>
+                    <span class="hub-meta-tag mint">🔒 ล็อกตัวละคร ON</span>
+                  </div>
+                </div>
               </div>
-              <div class="beginner-guide-controls">
-                <button type="button" id="simpleModeBtn" class="btn-simple-mode" title="ซ่อนปุ่มเทคนิค เหลือเฉพาะปุ่มจำเป็นสำหรับมือใหม่">
-                  <span id="simpleModeIcon">🌱</span>
-                  <span id="simpleModeLabel">โหมดใช้ง่าย: ปิด</span>
+
+              <div class="hub-hero-actions">
+                <button type="button" id="quickStartInputBtn" class="btn-quickstart-primary">
+                  ✨ ใส่ลิงก์ / แก้ข้อมูลสินค้า
                 </button>
-                <button type="button" id="dismissGuideBtn" class="icon-btn-mini" title="ซ่อนกล่องแนะนำนี้" aria-label="ซ่อนกล่องแนะนำ">
-                  ✕
-                </button>
+                <div class="hub-hero-sub-actions">
+                  <button type="button" id="hubCopyAllBtn" class="btn-secondary-sm">
+                    📋 คัดลอกทั้งหมด
+                  </button>
+                  <button type="button" id="hubSaveSheetBtn" class="btn-sheet-sm">
+                    📊 Google Sheet
+                  </button>
+                  <button type="button" id="simpleModeBtn" class="btn-simple-mode" title="ซ่อนปุ่มเทคนิค เหลือเฉพาะปุ่มหลักสำหรับมือใหม่">
+                    <span id="simpleModeIcon">🌱</span>
+                    <span id="simpleModeLabel">โหมดใช้ง่าย: ปิด</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div class="beginner-steps-grid">
-              <div class="beginner-step-item">
-                <span class="b-step-badge">1</span>
-                <div>
-                  <strong>วางลิงก์สินค้า</strong>
-                  <small>Shopee / Lazada / TikTok แล้วกดดึงรูปและข้อมูลอัตโนมัติ</small>
+            <!-- 4 Dedicated Result Module Cards -->
+            <div class="hub-modules-grid">
+              <!-- Card 1: สไลด์คลิป 0-10 วิ -->
+              <article class="hub-module-card accent-blue">
+                <div class="hub-module-head">
+                  <div class="hub-module-icon blue">🎬</div>
+                  <div class="hub-module-titles">
+                    <h3>สไลด์คลิป 0–10 วิ</h3>
+                    <span class="hub-module-badge">4 ช็อต + บทพูดไทย + Gemini วิดีโอ</span>
+                  </div>
                 </div>
-              </div>
-              <div class="beginner-step-item">
-                <span class="b-step-badge">2</span>
-                <div>
-                  <strong>กดสร้างพรอมต์ทั้งหมด</strong>
-                  <small>ได้สคริปต์คลิป 10 วิ + ภาพนิ่ง + แคปชั่นพร้อมโพสต์ทันที</small>
+                <p id="hubSlidesPreview" class="hub-module-preview">
+                  “หยุดเลื่อน! ตัวนี้คือจบจริง ไม่จกตา!” — แบ่งครบ 4 ช็อต (0–2s, 2–5s, 5–8s, 8–10s) พร้อมปุ่มเข้าเว็บ Gemini สร้างวิดีโอ
+                </p>
+                <div class="hub-module-foot">
+                  <button type="button" class="hub-open-btn primary" data-hub-page="slides">
+                    เปิดสไลด์คลิป 0–10 วิ →
+                  </button>
                 </div>
-              </div>
-              <div class="beginner-step-item">
-                <span class="b-step-badge">3</span>
-                <div>
-                  <strong>กดเปิดเว็บ Gemini ↗</strong>
-                  <small>ระบบคัดลอกคำสั่งให้แล้ว แค่กดวาง (Paste) เพื่อสร้างรูป/วิดีโอ</small>
+              </article>
+
+              <!-- Card 2: ภาพสินค้า UGC 4 ช่อง -->
+              <article class="hub-module-card accent-mint">
+                <div class="hub-module-head">
+                  <div class="hub-module-icon mint">🖼️</div>
+                  <div class="hub-module-titles">
+                    <h3>ภาพ UGC 4 ช่อง (1:1)</h3>
+                    <span class="hub-module-badge">สร้างรูปด้วย Gemini + ส่งเข้า Drive</span>
+                  </div>
                 </div>
-              </div>
+                <p id="hubUgcPreview" class="hub-module-preview">
+                  พรอมต์ภาพรีวิว 4 มุมไม่มีเส้นคั่น พร้อมปุ่มเข้าเว็บ Gemini สร้างรูปจริง แล้วนำรูปกลับมาใช้ต่อได้ทันที
+                </p>
+                <div class="hub-module-foot">
+                  <button type="button" class="hub-open-btn" data-hub-page="ugc-grid">
+                    เปิดหน้าภาพ UGC 4 ช่อง →
+                  </button>
+                </div>
+              </article>
+
+              <!-- Card 3: ภาพนิ่ง Imagen -->
+              <article class="hub-module-card accent-amber">
+                <div class="hub-module-head">
+                  <div class="hub-module-icon amber">📸</div>
+                  <div class="hub-module-titles">
+                    <h3>ภาพนิ่งโฆษณา Imagen</h3>
+                    <span class="hub-module-badge">3 ช็อตคมชัดระดับสตูดิโอ</span>
+                  </div>
+                </div>
+                <p id="hubImagenPreview" class="hub-module-preview">
+                  รวมพรอมต์ภาพสินค้า 3 มุมหลัก (Hero Packshot, ไลฟ์สไตล์, ซูมเนื้อสัมผัส) พร้อมคัดลอกใช้งานได้ทันที
+                </p>
+                <div class="hub-module-foot">
+                  <button type="button" class="hub-open-btn" data-hub-page="imagen">
+                    เปิดหน้าภาพนิ่ง Imagen →
+                  </button>
+                </div>
+              </article>
+
+              <!-- Card 4: แคปชั่น & แฮชแท็ก -->
+              <article class="hub-module-card accent-rose">
+                <div class="hub-module-head">
+                  <div class="hub-module-icon rose">💬</div>
+                  <div class="hub-module-titles">
+                    <h3>แคปชั่น &amp; แฮชแท็ก</h3>
+                    <span class="hub-module-badge">พร้อมโพสต์ TikTok / Reels / FB</span>
+                  </div>
+                </div>
+                <p id="hubCaptionsPreview" class="hub-module-preview">
+                  แคปชั่นขายของพร้อม CTA ปิดตะกร้าและชุดแฮชแท็กขายดี แยกตามแพลตฟอร์ม กดคัดลอกไปวางโพสต์ได้เลย
+                </p>
+                <div class="hub-module-foot">
+                  <button type="button" class="hub-open-btn" data-hub-page="captions">
+                    เปิดหน้าแคปชั่น &amp; # →
+                  </button>
+                </div>
+              </article>
             </div>
 
-            <div class="beginner-guide-actions">
-              <button type="button" id="quickStartInputBtn" class="btn-quickstart-primary">
-                ✨ เริ่มใส่ลิงก์สินค้าเลย
-              </button>
+            <!-- Slim Beginner Tip Strip -->
+            <div class="hub-quick-tip-bar">
+              <div class="hub-quick-tip-text">
+                <strong>💡 วิธีใช้ง่ายๆ ใน 3 ขั้น:</strong>
+                <span>① วางลิงก์สินค้า → ② กดสร้างพรอมต์ทั้งหมด → ③ เลือกเปิดการ์ดด้านบนแล้วกดเข้าเว็บ Gemini ↗ ได้เลย</span>
+              </div>
               <button type="button" id="quickStartHelpBtn" class="btn-secondary-sm">
-                📖 ดูตัวอย่างวิธีใช้
+                📖 คู่มือ 15 วิ
               </button>
             </div>
           </section>

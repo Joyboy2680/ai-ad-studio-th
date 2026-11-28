@@ -38,7 +38,12 @@ const PAGE_META = {
   studio: {
     title: 'สตูดิโอผลลัพธ์พร้อมใช้งาน',
     badge: 'หน้าหลัก',
-    sub: 'สไลด์คลิป 10 วิ • พรอมภาพนิ่ง Imagen • แคปชั่น & # • ไทม์ไลน์ • ภาพ UGC 4 ช่อง'
+    sub: 'ภาพรวมผลงานทั้งหมด • เลือกเปิดสไลด์คลิป 10 วิ • ภาพ UGC 4 ช่อง • ภาพนิ่ง • แคปชั่น'
+  },
+  slides: {
+    title: 'สไลด์คลิปขายของ 0–10 วิ (4 ช็อต)',
+    badge: '4 ช็อต',
+    sub: 'ช็อต 0–2s, 2–5s, 5–8s, 8–10s พร้อมบทพูดภาษาไทย และปุ่มเข้าเว็บ Gemini สร้างวิดีโอ'
   },
   'ugc-grid': {
     title: 'สร้างภาพสินค้า UGC ตาราง 4 ช่อง (1:1)',
@@ -263,6 +268,20 @@ export function initMenuBarAndAddons({
     );
   }
 
+  const studioOverviewHub = document.getElementById('studioOverviewHub');
+  const hubCopyAllBtn = document.getElementById('hubCopyAllBtn');
+  const hubSaveSheetBtn = document.getElementById('hubSaveSheetBtn');
+
+  studioOverviewHub?.querySelectorAll('[data-hub-page]').forEach((btn) => {
+    btn.addEventListener('click', () => navigateToPage(btn.dataset.hubPage));
+  });
+  hubCopyAllBtn?.addEventListener('click', () => {
+    document.getElementById('copyAllBtn')?.click();
+  });
+  hubSaveSheetBtn?.addEventListener('click', () => {
+    document.getElementById('saveSheetQuickBtn')?.click();
+  });
+
   // SPA Multi-Page Router
   let currentPage = 'studio';
 
@@ -281,7 +300,7 @@ export function initMenuBarAndAddons({
 
     // 1b. Update 2-step workflow stepper visibility & active state
     if (workflowStepper) {
-      const showStepper = ['input', 'studio', 'ugc-grid', 'imagen', 'captions'].includes(target);
+      const showStepper = ['input', 'studio', 'slides', 'ugc-grid', 'imagen', 'captions'].includes(target);
       workflowStepper.classList.toggle('hidden', !showStepper);
       const isStep1 = target === 'input';
       workflowStepper.querySelectorAll('[data-step-page]').forEach((btn) => {
@@ -291,7 +310,7 @@ export function initMenuBarAndAddons({
       });
     }
 
-    // 1c. Show beginner Quick-Start card only on Home (#studio) when not dismissed
+    // 1c. Legacy beginnerGuideCard guard (if present)
     if (beginnerGuideCard) {
       beginnerGuideCard.classList.toggle('hidden', guideDismissed || target !== 'studio');
     }
@@ -304,6 +323,7 @@ export function initMenuBarAndAddons({
     backToHomeBtn?.classList.toggle('hidden', target === 'studio');
 
     // 3. Reset all page containers before showing the active page
+    studioOverviewHub?.classList.add('hidden');
     studioGrid?.classList.add('hidden');
     studioGrid?.classList.remove('page-focus-input', 'page-focus-output', 'page-focus-sheet');
     addonsPanel?.classList.add('hidden');
@@ -315,13 +335,11 @@ export function initMenuBarAndAddons({
       studioGrid?.classList.add('page-focus-input');
       sheetConfigDrawer?.classList.add('hidden');
     } else if (target === 'studio') {
-      // Main Home Page: Dedicated clean full-width Studio Results workspace
-      studioGrid?.classList.remove('hidden');
-      studioGrid?.classList.add('page-focus-output');
+      // Main Home Page: Redesigned Clean Overview & Launchpad Hub
+      studioOverviewHub?.classList.remove('hidden');
       sheetConfigDrawer?.classList.add('hidden');
-      onSwitchTab?.('slides');
-    } else if (target === 'ugc-grid' || target === 'imagen' || target === 'captions') {
-      // Dedicated full-width page for UGC 4-Grid / Imagen / Captions
+    } else if (target === 'slides' || target === 'ugc-grid' || target === 'imagen' || target === 'captions') {
+      // Dedicated full-width page for 0-10s Slides / UGC 4-Grid / Imagen / Captions
       studioGrid?.classList.remove('hidden');
       studioGrid?.classList.add('page-focus-output');
       sheetConfigDrawer?.classList.add('hidden');
