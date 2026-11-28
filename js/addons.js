@@ -7,6 +7,8 @@
 export const STORAGE_CUSTOM_ADDONS = 'ai_ad_studio_th_custom_menu_addons';
 export const STORAGE_ANIMATIONS_ENABLED = 'ai_ad_studio_th_animations_enabled';
 export const STORAGE_THEME = 'ai_ad_studio_th_theme';
+export const STORAGE_GUIDE_DISMISSED = 'ai_ad_studio_th_guide_dismissed';
+export const STORAGE_SIMPLE_MODE = 'ai_ad_studio_th_simple_mode';
 
 export const HOOK_TEMPLATES = [
   {
@@ -105,6 +107,8 @@ export function initMenuBarAndAddons({
   const themeToggleIcon = document.getElementById('themeToggleIcon');
   const themeToggleText = document.getElementById('themeToggleText');
   const workflowStepper = document.getElementById('workflowStepper');
+  const mobileBottomNav = document.getElementById('mobileBottomNav');
+  const mobileBottomMenuBtn = document.getElementById('mobileBottomMenuBtn');
   const closeSettingsPanelBtn = document.getElementById('closeSettingsPanelBtn');
   const closeAddonsHubBtn = document.getElementById('closeAddonsHubBtn');
   const pageTitleEl = document.getElementById('workspacePageTitle');
@@ -142,6 +146,95 @@ export function initMenuBarAndAddons({
     const current = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
     applyTheme(current === 'light' ? 'dark' : 'light', { notify: true });
   });
+
+  // Beginner-Friendly Quick-Start Guide, Simple Mode & Quick Help Modal
+  const beginnerGuideCard = document.getElementById('beginnerGuideCard');
+  const dismissGuideBtn = document.getElementById('dismissGuideBtn');
+  const quickStartInputBtn = document.getElementById('quickStartInputBtn');
+  const quickStartHelpBtn = document.getElementById('quickStartHelpBtn');
+  const simpleModeBtn = document.getElementById('simpleModeBtn');
+  const simpleModeLabel = document.getElementById('simpleModeLabel');
+  const openHelpGuideBtn = document.getElementById('openHelpGuideBtn');
+  const quickHelpModal = document.getElementById('quickHelpModal');
+  const quickHelpBackdrop = document.getElementById('quickHelpBackdrop');
+  const closeQuickHelpBtn = document.getElementById('closeQuickHelpBtn');
+  const helpCloseBtn = document.getElementById('helpCloseBtn');
+  const helpStartNowBtn = document.getElementById('helpStartNowBtn');
+
+  let guideDismissed = false;
+  try {
+    guideDismissed = localStorage.getItem(STORAGE_GUIDE_DISMISSED) === '1';
+  } catch {
+    guideDismissed = false;
+  }
+
+  function applySimpleMode(enabled, { notify = false } = {}) {
+    document.body.classList.toggle('simple-mode', Boolean(enabled));
+    simpleModeBtn?.classList.toggle('active', Boolean(enabled));
+    if (simpleModeLabel) {
+      simpleModeLabel.textContent = enabled ? 'โหมดใช้ง่าย: เปิด' : 'โหมดใช้ง่าย: ปิด';
+    }
+    try {
+      localStorage.setItem(STORAGE_SIMPLE_MODE, enabled ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+    if (notify) {
+      onShowToast?.(
+        enabled
+          ? '🌱 เปิดโหมดใช้ง่าย — ซ่อนปุ่มเทคนิค เหลือเฉพาะปุ่มหลักสำหรับมือใหม่'
+          : '⚡ กลับสู่โหมดครบทุกฟังก์ชัน',
+        'info'
+      );
+    }
+  }
+
+  let savedSimpleMode = false;
+  try {
+    savedSimpleMode = localStorage.getItem(STORAGE_SIMPLE_MODE) === '1';
+  } catch {
+    savedSimpleMode = false;
+  }
+  applySimpleMode(savedSimpleMode);
+
+  simpleModeBtn?.addEventListener('click', () => {
+    applySimpleMode(!document.body.classList.contains('simple-mode'), { notify: true });
+  });
+
+  dismissGuideBtn?.addEventListener('click', () => {
+    guideDismissed = true;
+    beginnerGuideCard?.classList.add('hidden');
+    try {
+      localStorage.setItem(STORAGE_GUIDE_DISMISSED, '1');
+    } catch {
+      /* ignore */
+    }
+    onShowToast?.('ซ่อนกล่องแนะนำแล้ว • กดปุ่ม ❓ วิธีใช้ ด้านบนได้ทุกเมื่อ', 'info');
+  });
+
+  const openHelpModal = () => quickHelpModal?.classList.remove('hidden');
+  const closeHelpModal = () => quickHelpModal?.classList.add('hidden');
+
+  openHelpGuideBtn?.addEventListener('click', openHelpModal);
+  quickStartHelpBtn?.addEventListener('click', openHelpModal);
+  closeQuickHelpBtn?.addEventListener('click', closeHelpModal);
+  helpCloseBtn?.addEventListener('click', closeHelpModal);
+  quickHelpBackdrop?.addEventListener('click', closeHelpModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && quickHelpModal && !quickHelpModal.classList.contains('hidden')) {
+      closeHelpModal();
+    }
+  });
+
+  const jumpToUrlInput = () => {
+    closeHelpModal();
+    navigateToPage('input');
+    setTimeout(() => {
+      document.getElementById('productUrlInput')?.focus();
+    }, 180);
+  };
+  quickStartInputBtn?.addEventListener('click', jumpToUrlInput);
+  helpStartNowBtn?.addEventListener('click', jumpToUrlInput);
 
   // Mobile Off-Canvas Sidebar Helpers
   const openMobileSidebar = () => {
@@ -181,6 +274,9 @@ export function initMenuBarAndAddons({
     menuBar.querySelectorAll('[data-page]').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.page === target);
     });
+    mobileBottomNav?.querySelectorAll('[data-mobile-page]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.mobilePage === target);
+    });
     topbarSettingsBtn?.classList.toggle('active', target === 'settings');
 
     // 1b. Update 2-step workflow stepper visibility & active state
@@ -193,6 +289,11 @@ export function initMenuBarAndAddons({
         btn.classList.toggle('active', isStep1 ? isBtn1 : !isBtn1);
         btn.classList.toggle('done', !isStep1 && isBtn1);
       });
+    }
+
+    // 1c. Show beginner Quick-Start card only on Home (#studio) when not dismissed
+    if (beginnerGuideCard) {
+      beginnerGuideCard.classList.toggle('hidden', guideDismissed || target !== 'studio');
     }
 
     // 2. Update top header title, badge, subtitle & Back-to-Home button
@@ -264,6 +365,12 @@ export function initMenuBarAndAddons({
   workflowStepper?.querySelectorAll('[data-step-page]').forEach((btn) => {
     btn.addEventListener('click', () => navigateToPage(btn.dataset.stepPage));
   });
+
+  // Bind Mobile Bottom Navigation Bar
+  mobileBottomNav?.querySelectorAll('[data-mobile-page]').forEach((btn) => {
+    btn.addEventListener('click', () => navigateToPage(btn.dataset.mobilePage));
+  });
+  mobileBottomMenuBtn?.addEventListener('click', openMobileSidebar);
 
   // Bind Add-on sub-tabs to sync URL/sidebar highlight as well
   addonTabBtns.forEach((btn) => {

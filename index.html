@@ -218,16 +218,27 @@
               </div>
               <button
                 type="button"
+                id="openHelpGuideBtn"
+                class="api-help-link help-guide-btn"
+                title="วิธีใช้งานง่ายๆ ใน 3 ขั้นตอน"
+                aria-label="เปิดคู่มือวิธีใช้งาน"
+              >
+                <span>❓</span>
+                <span class="hide-on-xs">วิธีใช้</span>
+              </button>
+              <button
+                type="button"
                 id="themeToggleBtn"
                 class="api-help-link theme-toggle-btn"
                 title="สลับโหมดสว่าง / โหมดมืด"
                 aria-label="สลับโหมดสว่างหรือโหมดมืด"
               >
                 <span id="themeToggleIcon">☀️</span>
-                <span id="themeToggleText">สว่าง</span>
+                <span id="themeToggleText" class="hide-on-xs">สว่าง</span>
               </button>
               <button type="button" id="topbarSettingsBtn" class="api-help-link" title="ตั้งค่าการเชื่อมต่อและ UI">
-                ⚙️ ตั้งค่า
+                <span>⚙️</span>
+                <span class="hide-on-xs">ตั้งค่า</span>
               </button>
             </div>
           </div>
@@ -240,19 +251,72 @@
             <button type="button" class="workflow-step-btn" data-step-page="input">
               <span class="workflow-step-num">1</span>
               <span class="workflow-step-copy">
-                <strong>AI Auto-Fill &amp; ข้อมูลสินค้า</strong>
-                <small>วางลิงก์ดึงรูปสินค้าหลายมุม • ตั้งค่าโหมด &amp; ล็อกตัวละคร</small>
+                <strong>ใส่ลิงก์ &amp; ข้อมูลสินค้า</strong>
+                <small>วางลิงก์ดึงรูปสินค้าอัตโนมัติ • เลือกแนวคลิป 10 วิ</small>
               </span>
             </button>
             <span class="workflow-step-arrow" aria-hidden="true">→</span>
             <button type="button" class="workflow-step-btn active" data-step-page="studio">
               <span class="workflow-step-num">2</span>
               <span class="workflow-step-copy">
-                <strong>สตูดิโอผลลัพธ์พร้อมใช้งาน</strong>
-                <small>สไลด์คลิป 10 วิ • ภาพนิ่ง Imagen • ภาพ UGC 4 ช่อง • แคปชั่น</small>
+                <strong>สตูดิโอผลลัพธ์พร้อมใช้</strong>
+                <small>สไลด์คลิป 10 วิ • ภาพนิ่ง • ภาพ UGC 4 ช่อง • แคปชั่น</small>
               </span>
             </button>
           </div>
+
+          <!-- Beginner-Friendly 3-Step Quick-Start Card -->
+          <section id="beginnerGuideCard" class="beginner-guide-card" aria-label="คู่มือเริ่มต้นใช้งานง่ายๆ 3 ขั้นตอน">
+            <div class="beginner-guide-top">
+              <div class="beginner-guide-heading">
+                <span class="beginner-guide-pill">👋 ใช้งานง่ายใน 3 ขั้นตอน</span>
+                <h2>สร้างคลิปขายของ &amp; ภาพโฆษณาแบบไม่ต้องเก่ง AI</h2>
+                <p>ลองใช้ได้ฟรีทันทีไม่ต้องตั้งค่าให้ยุ่งยาก แค่ทำตาม 3 ขั้นตอนนี้:</p>
+              </div>
+              <div class="beginner-guide-controls">
+                <button type="button" id="simpleModeBtn" class="btn-simple-mode" title="ซ่อนปุ่มเทคนิค เหลือเฉพาะปุ่มจำเป็นสำหรับมือใหม่">
+                  <span id="simpleModeIcon">🌱</span>
+                  <span id="simpleModeLabel">โหมดใช้ง่าย: ปิด</span>
+                </button>
+                <button type="button" id="dismissGuideBtn" class="icon-btn-mini" title="ซ่อนกล่องแนะนำนี้" aria-label="ซ่อนกล่องแนะนำ">
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div class="beginner-steps-grid">
+              <div class="beginner-step-item">
+                <span class="b-step-badge">1</span>
+                <div>
+                  <strong>วางลิงก์สินค้า</strong>
+                  <small>Shopee / Lazada / TikTok แล้วกดดึงรูปและข้อมูลอัตโนมัติ</small>
+                </div>
+              </div>
+              <div class="beginner-step-item">
+                <span class="b-step-badge">2</span>
+                <div>
+                  <strong>กดสร้างพรอมต์ทั้งหมด</strong>
+                  <small>ได้สคริปต์คลิป 10 วิ + ภาพนิ่ง + แคปชั่นพร้อมโพสต์ทันที</small>
+                </div>
+              </div>
+              <div class="beginner-step-item">
+                <span class="b-step-badge">3</span>
+                <div>
+                  <strong>กดเปิดเว็บ Gemini ↗</strong>
+                  <small>ระบบคัดลอกคำสั่งให้แล้ว แค่กดวาง (Paste) เพื่อสร้างรูป/วิดีโอ</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="beginner-guide-actions">
+              <button type="button" id="quickStartInputBtn" class="btn-quickstart-primary">
+                ✨ เริ่มใส่ลิงก์สินค้าเลย
+              </button>
+              <button type="button" id="quickStartHelpBtn" class="btn-secondary-sm">
+                📖 ดูตัวอย่างวิธีใช้
+              </button>
+            </div>
+          </section>
 
           <!-- Unified Studio Settings Drawer Panel -->
           <section id="settingsPanelCard" class="glass-card settings-panel hidden" aria-label="ตั้งค่าสตูดิโอและการเชื่อมต่อ">
@@ -1198,6 +1262,82 @@
         Powered by <code>gemini-3.5-flash-lite</code> • <code>Fast Mode</code> • URL Context &amp; Google Search Grounding
       </div>
     </footer>
+      </div>
+    </div>
+
+    <!-- Native-Style Mobile Bottom Navigation Bar (<= 900px) -->
+    <nav id="mobileBottomNav" class="mobile-bottom-nav" aria-label="แถบเมนูลัดมือถือ">
+      <button type="button" class="mob-nav-btn" data-mobile-page="input">
+        <span class="mob-nav-icon">✨</span>
+        <span class="mob-nav-label">กรอกลิงก์</span>
+      </button>
+      <button type="button" class="mob-nav-btn active" data-mobile-page="studio">
+        <span class="mob-nav-icon">🏠</span>
+        <span class="mob-nav-label">สตูดิโอ</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-mobile-page="ugc-grid">
+        <span class="mob-nav-icon">🖼️</span>
+        <span class="mob-nav-label">UGC 4 ช่อง</span>
+      </button>
+      <button type="button" class="mob-nav-btn" data-mobile-page="sheet">
+        <span class="mob-nav-icon">📊</span>
+        <span class="mob-nav-label">Sheet</span>
+      </button>
+      <button type="button" id="mobileBottomMenuBtn" class="mob-nav-btn" aria-label="เปิดเมนูทั้งหมด">
+        <span class="mob-nav-icon">☰</span>
+        <span class="mob-nav-label">เมนู</span>
+      </button>
+    </nav>
+
+    <!-- Beginner-Friendly Quick Help Modal -->
+    <div id="quickHelpModal" class="quick-help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="quickHelpTitle">
+      <div class="quick-help-backdrop" id="quickHelpBackdrop"></div>
+      <div class="quick-help-dialog">
+        <div class="quick-help-head">
+          <div>
+            <span class="beginner-guide-pill">📖 คู่มือฉบับคนไม่เคยใช้ AI</span>
+            <h3 id="quickHelpTitle">วิธีใช้งาน AI Ad Studio TH ให้เข้าใจใน 15 วินาที</h3>
+          </div>
+          <button type="button" id="closeQuickHelpBtn" class="icon-btn-mini" aria-label="ปิดหน้าต่างคู่มือ">✕</button>
+        </div>
+
+        <div class="quick-help-list">
+          <div class="quick-help-row">
+            <span class="b-step-badge">1</span>
+            <div>
+              <strong>วางลิงก์สินค้าแล้วปล่อยให้ระบบช่วยกรอก</strong>
+              <p>กดปุ่ม <b>✨ ใส่ลิงก์สินค้า</b> แล้ววางลิงก์จาก Shopee, Lazada หรือ TikTok ระบบจะช่วยดึงรูปสินค้าหลายมุมและสรุปจุดเด่นให้ทันที (หรือพิมพ์ชื่อสินค้าเองก็ได้)</p>
+            </div>
+          </div>
+          <div class="quick-help-row">
+            <span class="b-step-badge">2</span>
+            <div>
+              <strong>กดปุ่ม “สร้างพรอมต์ทั้งหมด”</strong>
+              <p>ระบบจะแยกช็อตคลิปขายของ 0–10 วิ เป็น 4 ช็อต พร้อมบทพูดภาษาไทย แคปชั่นขายของ และคำสั่งสร้างภาพนิ่งให้อัตโนมัติ (ใช้ได้ฟรีทันทีในโหมด Demo หรือใส่ Gemini Key ฟรีเพื่อใช้ AI จริง)</p>
+            </div>
+          </div>
+          <div class="quick-help-row">
+            <span class="b-step-badge">3</span>
+            <div>
+              <strong>กดปุ่ม “เข้าเว็บ Gemini ↗” เพื่อสร้างรูปหรือวิดีโอ</strong>
+              <p>ทุกปุ่ม Gemini จะ <b>คัดลอกคำสั่ง (Prompt) ให้โดยอัตโนมัติ</b> แล้วเปิดเว็บ Gemini ให้เลย แค่กดวาง (Paste) แล้วกดส่งก็จะได้รูปหรือวิดีโอจริงทันที</p>
+            </div>
+          </div>
+          <div class="quick-help-row">
+            <span class="b-step-badge">💡</span>
+            <div>
+              <strong>อยากให้หน้าจอโล่งๆ กดเปิด “🌱 โหมดใช้ง่าย”</strong>
+              <p>ซ่อนปุ่มเทคนิคทั้งหมด เหลือเฉพาะช่องใส่ข้อมูลและปุ่มคัดลอก/เปิด Gemini ที่ใช้จริง เหมาะมากสำหรับใช้งานบนมือถือ</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-help-foot">
+          <button type="button" id="helpStartNowBtn" class="btn-quickstart-primary">
+            ✨ เข้าใจแล้ว เริ่มใส่ลิงก์สินค้าเลย
+          </button>
+          <button type="button" id="helpCloseBtn" class="btn-secondary-sm">ปิดหน้าต่าง</button>
+        </div>
       </div>
     </div>
 
