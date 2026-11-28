@@ -30,6 +30,11 @@ export const HOOK_TEMPLATES = [
 ];
 
 const PAGE_META = {
+  trends: {
+    title: 'เรดาร์สินค้าขายดีติดเทรนด์ (Winning Products)',
+    badge: 'HOT',
+    sub: 'กรองตามยอดขายขั้นต่ำ (500+), ค่าคอมมิชชั่น, เติบโต 7 วัน • คลิกเดียวส่งไปสร้างคลิป 10 วิทันที'
+  },
   input: {
     title: 'AI Auto-Fill จากลิงก์ & ข้อมูลสินค้า',
     badge: 'ขั้นที่ 1',
@@ -274,6 +279,7 @@ export function initMenuBarAndAddons({
   }
 
   const studioOverviewHub = document.getElementById('studioOverviewHub');
+  const trendsRadarPanel = document.getElementById('trendsRadarPanel');
   const hubCopyAllBtn = document.getElementById('hubCopyAllBtn');
   const hubExportBriefBtn = document.getElementById('hubExportBriefBtn');
   const hubSaveSheetBtn = document.getElementById('hubSaveSheetBtn');
@@ -333,12 +339,17 @@ export function initMenuBarAndAddons({
 
     // 3. Reset all page containers before showing the active page
     studioOverviewHub?.classList.add('hidden');
+    trendsRadarPanel?.classList.add('hidden');
     studioGrid?.classList.add('hidden');
     studioGrid?.classList.remove('page-focus-input', 'page-focus-output', 'page-focus-sheet');
     addonsPanel?.classList.add('hidden');
     settingsPanel?.classList.add('hidden');
 
-    if (target === 'input') {
+    if (target === 'trends') {
+      // Dedicated full-width Winning Products Trends Radar page
+      trendsRadarPanel?.classList.remove('hidden');
+      sheetConfigDrawer?.classList.add('hidden');
+    } else if (target === 'input') {
       // Dedicated full-width Input & AI Auto-Fill page (Step 1 before Studio Results)
       studioGrid?.classList.remove('hidden');
       studioGrid?.classList.add('page-focus-input');

@@ -5667,6 +5667,378 @@ html[data-theme="light"] .btn-speak-mini {
   }
 }
 
+/* ==========================================================================
+   Affiliate Winning Products Trends Radar (#trendsRadarPanel)
+   ========================================================================== */
+
+.hub-quick-tip-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.menu-badge.rose {
+  background: rgba(251, 113, 133, 0.16);
+  color: #fda4af;
+  border-color: rgba(251, 113, 133, 0.36);
+}
+
+html[data-theme="light"] .menu-badge.rose {
+  background: rgba(225, 29, 72, 0.12);
+  color: #be123c;
+  border-color: rgba(225, 29, 72, 0.28);
+}
+
+.trends-radar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 100%;
+}
+
+.trends-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trends-kpi-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trends-kpi-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.trends-kpi-card strong {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trends-toolbar-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trends-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.trends-search-wrap {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.trends-select {
+  width: auto;
+  min-width: 150px;
+}
+
+.trends-category-pills {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.trends-cat-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-well);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s var(--ease-spring);
+}
+
+.trends-cat-pill:hover {
+  border-color: var(--border-medium);
+  color: var(--text-primary);
+}
+
+.trends-cat-pill.active {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(52, 211, 153, 0.14));
+  border-color: rgba(96, 165, 250, 0.45);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+html[data-theme="light"] .trends-cat-pill.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.trends-add-form {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--bg-well);
+  border: 1px dashed var(--border-medium);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trends-add-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.trends-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trends-product-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.trend-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  transition: transform 0.2s var(--ease-spring), border-color 0.2s ease;
+}
+
+.trend-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(96, 165, 250, 0.42);
+}
+
+.trend-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.trend-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.trend-plat-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(96, 165, 250, 0.16);
+  color: #93c5fd;
+  border: 1px solid rgba(96, 165, 250, 0.32);
+}
+
+.trend-cat-badge {
+  font-size: 0.68rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-well);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+
+.trend-score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-viral-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(251, 191, 36, 0.34);
+}
+
+html[data-theme="light"] .trend-plat-badge {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .trend-viral-badge {
+  background: rgba(217, 119, 6, 0.14);
+  color: #92400e;
+}
+
+.trend-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.trend-emoji {
+  font-size: 1.45rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.trend-card-title-row h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.38;
+  color: var(--text-primary);
+}
+
+.trend-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trend-metric {
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: var(--bg-well);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trend-metric span {
+  font-size: 0.67rem;
+  color: var(--text-muted);
+}
+
+.trend-metric strong {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trend-metric strong.mint {
+  color: var(--accent-mint);
+}
+
+.trend-metric strong.amber {
+  color: var(--accent-amber);
+}
+
+.trend-hook-box {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  padding: 9px 11px;
+  border-radius: 11px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.22);
+}
+
+.trend-hook-box span {
+  font-weight: 600;
+  color: var(--accent-amber);
+}
+
+html[data-theme="light"] .trend-hook-box {
+  background: #fffbeb;
+  border-color: rgba(217, 119, 6, 0.25);
+  color: #78350f;
+}
+
+.trend-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.trend-gen-btn {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 1180px) {
+  .trends-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .trends-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .trends-product-grid,
+  .trends-add-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trends-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .trends-category-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+
+  .trends-category-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .trend-card {
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .trend-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .trend-card-actions > button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
 
 
 

@@ -68,6 +68,11 @@
         <nav class="sidebar-nav" id="studioMenuBar" aria-label="แถบเมนูฟังก์ชันหลักและฟังก์ชันเสริม">
           <div class="sidebar-section-label">ขั้นตอนหลัก</div>
           <div class="sidebar-group">
+            <button type="button" class="side-nav-item" data-page="trends">
+              <span class="side-nav-icon">🔥</span>
+              <span class="side-nav-label">สินค้าติดเทรนด์</span>
+              <span class="menu-badge rose">HOT</span>
+            </button>
             <button type="button" class="side-nav-item" data-page="input">
               <span class="side-nav-icon">✨</span>
               <span class="side-nav-label">AI Auto-Fill &amp; ข้อมูลสินค้า</span>
@@ -418,12 +423,110 @@
             <div class="hub-quick-tip-bar">
               <div class="hub-quick-tip-text">
                 <strong>💡 วิธีใช้ง่ายๆ ใน 3 ขั้น:</strong>
-                <span>① วางลิงก์สินค้า → ② กดสร้างพรอมต์ทั้งหมด → ③ เลือกเปิดการ์ดด้านบนแล้วกดเข้าเว็บ Gemini ↗ ได้เลย</span>
+                <span>① เลือกสินค้าติดเทรนด์หรือวางลิงก์ → ② กดสร้างพรอมต์ทั้งหมด → ③ กดเข้าเว็บ Gemini ↗ ได้เลย</span>
               </div>
-              <button type="button" id="quickStartHelpBtn" class="btn-secondary-sm">
-                📖 คู่มือ 15 วิ
-              </button>
+              <div class="hub-quick-tip-btns">
+                <button type="button" class="btn-secondary-sm" data-hub-page="trends">
+                  🔥 ดูสินค้าติดเทรนด์
+                </button>
+                <button type="button" id="quickStartHelpBtn" class="btn-secondary-sm">
+                  📖 คู่มือ 15 วิ
+                </button>
+              </div>
             </div>
+          </section>
+
+          <!-- Affiliate Winning Products Trends Radar (#trends) -->
+          <section id="trendsRadarPanel" class="trends-radar-panel hidden" aria-label="เรดาร์สินค้าขายดีติดเทรนด์ Affiliate">
+            <!-- Top KPI Summary Strip -->
+            <div class="trends-kpi-grid">
+              <div class="trends-kpi-card">
+                <span class="trends-kpi-label">🔥 สินค้าผ่านเกณฑ์</span>
+                <strong id="trendsStatCount">12 รายการ</strong>
+              </div>
+              <div class="trends-kpi-card">
+                <span class="trends-kpi-label">📦 ยอดขายรวมกลุ่มนี้</span>
+                <strong id="trendsStatSales">0 ชิ้น</strong>
+              </div>
+              <div class="trends-kpi-card">
+                <span class="trends-kpi-label">💰 ค่าคอมสูงสุด / ชิ้น</span>
+                <strong id="trendsStatMaxComm">฿0</strong>
+              </div>
+              <div class="trends-kpi-card">
+                <span class="trends-kpi-label">⚡ จุดเด่นสตูดิโอ</span>
+                <strong>คลิกเดียวสร้างคลิป 10 วิ</strong>
+              </div>
+            </div>
+
+            <!-- Filter & Sort Bar (Inspired by ?min_sales=500&sort=sales) -->
+            <div class="trends-toolbar-card">
+              <div class="trends-toolbar-row">
+                <div class="trends-search-wrap">
+                  <input
+                    type="search"
+                    id="trendsSearchInput"
+                    class="field-input"
+                    placeholder="🔍 ค้นหาชื่อสินค้า, หมวดหมู่, มุมขายดี..."
+                    aria-label="ค้นหาสินค้าติดเทรนด์"
+                  />
+                </div>
+                <select id="trendsMinSalesSelect" class="field-select trends-select" aria-label="กรองยอดขายขั้นต่ำ">
+                  <option value="0">ยอดขาย: ทั้งหมด</option>
+                  <option value="500" selected>ยอดขาย: 500+ ชิ้น</option>
+                  <option value="1000">ยอดขาย: 1,000+ ชิ้น</option>
+                  <option value="5000">ยอดขาย: 5,000+ ชิ้น</option>
+                  <option value="10000">ยอดขาย: 10,000+ ชิ้น</option>
+                </select>
+                <select id="trendsPlatformSelect" class="field-select trends-select" aria-label="กรองแพลตฟอร์ม">
+                  <option value="all" selected>แพลตฟอร์ม: ทั้งหมด</option>
+                  <option value="TikTok Shop">TikTok Shop</option>
+                  <option value="Shopee">Shopee</option>
+                  <option value="Lazada">Lazada</option>
+                </select>
+                <select id="trendsSortSelect" class="field-select trends-select" aria-label="เรียงลำดับสินค้า">
+                  <option value="sales" selected>เรียง: 🔥 ยอดขายสูงสุด</option>
+                  <option value="commission">เรียง: 💰 ค่าคอม/ชิ้น สูงสุด</option>
+                  <option value="growth">เรียง: 📈 เติบโต 7 วันสูงสุด</option>
+                  <option value="viral">เรียง: ⭐ คะแนนโอกาสปัง</option>
+                </select>
+                <button type="button" id="toggleAddTrendFormBtn" class="btn-secondary-sm">
+                  + เพิ่มสินค้าเอง
+                </button>
+              </div>
+
+              <!-- Category Pills -->
+              <div id="trendsCategoryPills" class="trends-category-pills" role="tablist" aria-label="หมวดหมู่สินค้า">
+                <button type="button" class="trends-cat-pill active" data-trend-cat="all">ทั้งหมด</button>
+                <button type="button" class="trends-cat-pill" data-trend-cat="beauty">🧴 ความงาม &amp; สกินแคร์</button>
+                <button type="button" class="trends-cat-pill" data-trend-cat="gadget">🎧 แกดเจ็ต &amp; ไอที</button>
+                <button type="button" class="trends-cat-pill" data-trend-cat="home">🏠 ของใช้ในบ้าน</button>
+                <button type="button" class="trends-cat-pill" data-trend-cat="health">💊 แฟชั่น &amp; สุขภาพ</button>
+                <button type="button" class="trends-cat-pill" data-trend-cat="food">🍵 อาหาร &amp; เครื่องดื่ม</button>
+              </div>
+
+              <!-- Collapsible Custom Product Add Form -->
+              <form id="addCustomTrendForm" class="trends-add-form hidden">
+                <div class="trends-add-grid">
+                  <input type="text" id="newTrendName" class="field-input" placeholder="ชื่อสินค้าขายดี *" required />
+                  <input type="number" id="newTrendPrice" class="field-input" placeholder="ราคา (บาท) เช่น 299" min="1" required />
+                  <input type="number" id="newTrendComm" class="field-input" placeholder="ค่าคอม (%) เช่น 15" min="1" max="80" value="15" />
+                  <input type="number" id="newTrendSales" class="field-input" placeholder="ยอดขาย (ชิ้น) เช่น 1200" min="0" value="800" />
+                  <select id="newTrendPlatform" class="field-select">
+                    <option value="TikTok Shop">TikTok Shop</option>
+                    <option value="Shopee">Shopee</option>
+                    <option value="Lazada">Lazada</option>
+                  </select>
+                  <input type="url" id="newTrendUrl" class="field-input" placeholder="ลิงก์สินค้า (ไม่บังคับ)" />
+                </div>
+                <div class="trends-add-actions">
+                  <button type="submit" class="btn-quickstart-primary">บันทึกเข้าบอร์ดเทรนด์</button>
+                  <button type="button" id="cancelAddTrendBtn" class="btn-secondary-sm">ยกเลิก</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Trending Products Grid -->
+            <div id="trendsProductGrid" class="trends-product-grid"></div>
           </section>
 
           <!-- Unified Studio Settings Drawer Panel -->

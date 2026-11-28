@@ -46,6 +46,14 @@ import {
   regenerateSingleShotVariation,
   exportStoryboardBriefPdf
 } from './studio-pro.js';
+import {
+  getAllTrendingProducts,
+  filterAndSortTrends,
+  calcCommissionBaht,
+  formatSalesShort,
+  saveCustomTrend,
+  deleteCustomTrend
+} from './trends.js';
 
 const STORAGE_API_KEY = 'ai_ad_studio_th_gemini_api_key';
 const MAX_IMAGE_DIM = 640;
@@ -2297,6 +2305,224 @@ function init() {
   });
   state.navigatePage = navCtrl?.navigateToPage || null;
   initStudioProFeatures();
+  initTrendsRadar();
+}
+
+function initTrendsRadar() {
+  const gridEl = document.getElementById('trendsProductGrid');
+  if (!gridEl) return;
+
+  const searchInput = document.getElementById('trendsSearchInput');
+  const minSalesSelect = document.getElementById('trendsMinSalesSelect');
+  const platformSelect = document.getElementById('trendsPlatformSelect');
+  const sortSelect = document.getElementById('trendsSortSelect');
+  const catPillsWrap = document.getElementById('trendsCategoryPills');
+  const statCountEl = document.getElementById('trendsStatCount');
+  const statSalesEl = document.getElementById('trendsStatSales');
+  const statMaxCommEl = document.getElementById('trendsStatMaxComm');
+  const toggleAddBtn = document.getElementById('toggleAddTrendFormBtn');
+  const addForm = document.getElementById('addCustomTrendForm');
+  const cancelAddBtn = document.getElementById('cancelAddTrendBtn');
+
+  const filterState = {
+    query: '',
+    category: 'all',
+    platform: 'all',
+    minSales: 500,
+    sortBy: 'sales'
+  };
+
+  function applyProductToStudio(prod, { autoGenerate = false } = {}) {
+    if (!prod) return;
+    state.isSamplePreload = false;
+    if (el.productUrlInput) el.productUrlInput.value = prod.url || '';
+    if (el.productNameInput) el.productNameInput.value = prod.name || '';
+    if (el.productBenefitsInput) el.productBenefitsInput.value = prod.benefits || prod.hookIdea || '';
+    if (el.productPriceInput) el.productPriceInput.value = prod.priceText || `ราคาโปร ฿${prod.price}`;
+    if (el.targetAudienceInput) el.targetAudienceInput.value = prod.audience || 'ลูกค้าออนไลน์สายช้อป TikTok / Shopee';
+    if (el.productAppearanceInput) el.productAppearanceInput.value = prod.appearance || prod.name;
+
+    if (prod.recommendedStyle) {
+      state.selectedClipStyle = prod.recommendedStyle;
+      renderClipStyles();
+    }
+
+    if (autoGenerate) {
+      showToast(`🔥 กำลังสร้างชุดพรอมต์ 10 วิ ให้ “${prod.name}”...`, 'info');
+      handleGenerate();
+    } else {
+      state.navigatePage?.('input');
+      showToast(`✨ ส่งข้อมูล “${prod.name}” ไปหน้ากรอกข้อมูลแล้ว แก้ไขต่อได้เลย!`, 'success');
+    }
+  }
+
+  function renderTrends() {
+    const all = getAllTrendingProducts();
+    const list = filterAndSortTrends(all, filterState);
+
+    if (statCountEl) statCountEl.textContent = `${list.length} รายการ`;
+    const totalSales = list.reduce((sum, p) => sum + (Number(p.sales) || 0), 0);
+    if (statSalesEl) statSalesEl.textContent = `${totalSales.toLocaleString('th-TH')} ชิ้น`;
+    const maxComm = list.reduce((mx, p) => Math.max(mx, calcCommissionBaht(p.price, p.commissionPct)), 0);
+    if (statMaxCommEl) statMaxCommEl.textContent = `฿${maxComm.toLocaleString('th-TH')}`;
+
+    if (!list.length) {
+      gridEl.innerHTML =
+        '<div class="hub-history-empty">ไม่พบสินค้าที่ตรงเงื่อนไข ลองลดยอดขายขั้นต่ำหรือเลือกหมวด “ทั้งหมด”</div>';
+      return;
+    }
+
+    gridEl.innerHTML = list
+      .map((p) => {
+        const commBaht = calcCommissionBaht(p.price, p.commissionPct);
+        return `
+          <article class="trend-card" data-trend-id="${escapeHtml(p.id)}">
+            <div class="trend-card-top">
+              <div class="trend-card-badges">
+                <span class="trend-plat-badge">${escapeHtml(p.platform)}</span>
+                <span class="trend-cat-badge">${escapeHtml(p.categoryLabel || 'ยอดนิยม')}</span>
+              </div>
+              <div class="trend-score-wrap">
+                <span class="trend-viral-badge">⭐ ${escapeHtml(String(p.viralScore || 90))}</span>
+                ${
+                  p.isCustom
+                    ? `<button type="button" class="icon-btn-mini" data-del-trend="${escapeHtml(p.id)}" title="ลบสินค้านี้ออกจากบอร์ด">✕</button>`
+                    : ''
+                }
+              </div>
+            </div>
+
+            <div class="trend-card-title-row">
+              <span class="trend-emoji">${escapeHtml(p.emoji || '🔥')}</span>
+              <h4>${escapeHtml(p.name)}</h4>
+            </div>
+
+            <div class="trend-metrics-row">
+              <div class="trend-metric">
+                <span>ยอดขาย</span>
+                <strong>🔥 ${escapeHtml(formatSalesShort(p.sales))}</strong>
+              </div>
+              <div class="trend-metric">
+                <span>เติบโต 7 วัน</span>
+                <strong class="mint">+${escapeHtml(String(p.growth7d || 80))}%</strong>
+              </div>
+              <div class="trend-metric">
+                <span>ราคา</span>
+                <strong>฿${escapeHtml(Number(p.price || 0).toLocaleString('th-TH'))}</strong>
+              </div>
+              <div class="trend-metric">
+                <span>คอม ${escapeHtml(String(p.commissionPct || 15))}%</span>
+                <strong class="amber">฿${escapeHtml(String(commBaht))}/ชิ้น</strong>
+              </div>
+            </div>
+
+            <div class="trend-hook-box">
+              <span>💡 มุมขายดี:</span> “${escapeHtml(p.hookIdea || p.benefits || '')}”
+            </div>
+
+            <div class="trend-card-actions">
+              <button type="button" class="btn-quickstart-primary trend-gen-btn" data-trend-generate="${escapeHtml(p.id)}">
+                ✨ สร้างคลิป 10 วิสินค้านี้เลย
+              </button>
+              <button type="button" class="btn-secondary-sm" data-trend-fill="${escapeHtml(p.id)}">
+                📝 แก้ข้อมูล
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join('');
+
+    gridEl.querySelectorAll('[data-trend-generate]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const prod = getAllTrendingProducts().find((x) => x.id === btn.dataset.trendGenerate);
+        applyProductToStudio(prod, { autoGenerate: true });
+      });
+    });
+
+    gridEl.querySelectorAll('[data-trend-fill]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const prod = getAllTrendingProducts().find((x) => x.id === btn.dataset.trendFill);
+        applyProductToStudio(prod, { autoGenerate: false });
+      });
+    });
+
+    gridEl.querySelectorAll('[data-del-trend]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        deleteCustomTrend(btn.dataset.delTrend);
+        renderTrends();
+        showToast('ลบสินค้าออกจากบอร์ดเทรนด์แล้ว', 'info');
+      });
+    });
+  }
+
+  searchInput?.addEventListener('input', () => {
+    filterState.query = searchInput.value;
+    renderTrends();
+  });
+  minSalesSelect?.addEventListener('change', () => {
+    filterState.minSales = Number(minSalesSelect.value) || 0;
+    renderTrends();
+  });
+  platformSelect?.addEventListener('change', () => {
+    filterState.platform = platformSelect.value || 'all';
+    renderTrends();
+  });
+  sortSelect?.addEventListener('change', () => {
+    filterState.sortBy = sortSelect.value || 'sales';
+    renderTrends();
+  });
+
+  catPillsWrap?.querySelectorAll('[data-trend-cat]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      filterState.category = pill.dataset.trendCat || 'all';
+      catPillsWrap.querySelectorAll('[data-trend-cat]').forEach((p) => {
+        p.classList.toggle('active', p === pill);
+      });
+      renderTrends();
+    });
+  });
+
+  toggleAddBtn?.addEventListener('click', () => addForm?.classList.toggle('hidden'));
+  cancelAddBtn?.addEventListener('click', () => addForm?.classList.add('hidden'));
+
+  addForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('newTrendName')?.value.trim();
+    const price = Number(document.getElementById('newTrendPrice')?.value) || 199;
+    const commissionPct = Number(document.getElementById('newTrendComm')?.value) || 15;
+    const sales = Number(document.getElementById('newTrendSales')?.value) || 500;
+    const platform = document.getElementById('newTrendPlatform')?.value || 'TikTok Shop';
+    const url = document.getElementById('newTrendUrl')?.value.trim() || '';
+    if (!name) return;
+
+    saveCustomTrend({
+      name,
+      category: 'beauty',
+      categoryLabel: 'สินค้าที่เพิ่มเอง',
+      platform,
+      price,
+      priceText: `ราคาโปร ฿${price.toLocaleString('th-TH')} ส่งฟรี`,
+      commissionPct,
+      sales,
+      growth7d: 100,
+      viralScore: 92,
+      emoji: '🌟',
+      benefits: `${name} สินค้าขายดีติดเทรนด์ใน ${platform}`,
+      audience: 'กลุ่มลูกค้าออนไลน์ที่กำลังมองหาสินค้านี้',
+      appearance: name,
+      hookIdea: `ของมันต้องมี! ${name} ยอดขายพุ่ง ${formatSalesShort(sales)} ชิ้นแล้ว`,
+      recommendedStyle: 'fast-hands-on',
+      url
+    });
+
+    addForm.reset();
+    addForm.classList.add('hidden');
+    renderTrends();
+    showToast(`🔥 เพิ่ม “${name}” เข้าบอร์ดสินค้าติดเทรนด์แล้ว!`, 'success');
+  });
+
+  renderTrends();
 }
 
 function saveCurrentCampaignToHistory() {
@@ -2336,8 +2562,8 @@ function restoreProjectFromHistory(item) {
 
   if (item.flowMode) state.selectedFlowMode = item.flowMode;
   if (item.clipStyle) state.selectedClipStyle = item.clipStyle;
-  renderFlowModeCards();
-  renderClipStyleCards();
+  renderFlowModes();
+  renderClipStyles();
 
   if (item.plan) {
     state.plan = item.plan;
