@@ -60,6 +60,11 @@ const PAGE_META = {
     badge: 'Captions & #',
     sub: 'แคปชั่นแยกแพลตฟอร์ม TikTok / Reels / Facebook พร้อมแฮชแท็กขายดี'
   },
+  timeline: {
+    title: 'ดูไทม์ไลน์คลิปทั้งหมด (0–10 วิ)',
+    badge: '10s',
+    sub: 'สรุปลำดับช็อต 0–2s, 2–5s, 5–8s, 8–10s พร้อมบทพูดและทิปส์ตัดต่อภาพรวม'
+  },
   sheet: {
     title: 'บันทึกประวัติข้อมูลลง Google Sheet',
     badge: 'Google Sheet',
@@ -300,7 +305,7 @@ export function initMenuBarAndAddons({
 
     // 1b. Update 2-step workflow stepper visibility & active state
     if (workflowStepper) {
-      const showStepper = ['input', 'studio', 'slides', 'ugc-grid', 'imagen', 'captions'].includes(target);
+      const showStepper = ['input', 'studio', 'slides', 'imagen', 'captions', 'timeline', 'ugc-grid'].includes(target);
       workflowStepper.classList.toggle('hidden', !showStepper);
       const isStep1 = target === 'input';
       workflowStepper.querySelectorAll('[data-step-page]').forEach((btn) => {
@@ -338,8 +343,14 @@ export function initMenuBarAndAddons({
       // Main Home Page: Redesigned Clean Overview & Launchpad Hub
       studioOverviewHub?.classList.remove('hidden');
       sheetConfigDrawer?.classList.add('hidden');
-    } else if (target === 'slides' || target === 'ugc-grid' || target === 'imagen' || target === 'captions') {
-      // Dedicated full-width page for 0-10s Slides / UGC 4-Grid / Imagen / Captions
+    } else if (
+      target === 'slides' ||
+      target === 'imagen' ||
+      target === 'captions' ||
+      target === 'timeline' ||
+      target === 'ugc-grid'
+    ) {
+      // Dedicated full-width page for 0-10s Slides / Imagen / Captions / Timeline / UGC 4-Grid
       studioGrid?.classList.remove('hidden');
       studioGrid?.classList.add('page-focus-output');
       sheetConfigDrawer?.classList.add('hidden');
